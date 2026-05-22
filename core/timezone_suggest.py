@@ -66,3 +66,36 @@ def suggest_timezone(country: str, city: str = "") -> list[str]:
                 suggestions.append(tz)
 
     return suggestions[:10]
+
+
+# Web form datalist (country/city 없이 직접 선택)
+COMMON_TIMEZONES: list[str] = [
+    "Asia/Seoul",
+    "Asia/Tokyo",
+    "Asia/Shanghai",
+    "Asia/Singapore",
+    "Asia/Ho_Chi_Minh",
+    "Asia/Bangkok",
+    "Asia/Dubai",
+    "Europe/London",
+    "Europe/Berlin",
+    "Europe/Paris",
+    "America/New_York",
+    "America/Chicago",
+    "America/Los_Angeles",
+    "America/Toronto",
+    "Australia/Sydney",
+    "Pacific/Auckland",
+    "UTC",
+]
+
+
+def list_common_timezones(current: str = "") -> list[str]:
+    """Deduplicated common IANA zones; current value first when set."""
+    out: list[str] = []
+    if current and current not in COMMON_TIMEZONES:
+        out.append(current)
+    for tz in COMMON_TIMEZONES:
+        if tz not in out:
+            out.append(tz)
+    return out

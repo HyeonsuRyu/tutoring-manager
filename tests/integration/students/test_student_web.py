@@ -15,6 +15,8 @@ def test_student_create_form_korean_labels(logged_in_client):
     assert "<label" in html
     for label in ("이름", "출생 연도", "학년", "시간대", "정규 수업 슬롯"):
         assert label in html
+    assert "국가" not in html
+    assert "도시" not in html
 
 
 @pytest.mark.integration
@@ -31,8 +33,6 @@ def test_student_list_and_create(logged_in_client, user):
             "name": "신규학생",
             "birth_year": 2011,
             "grade": "중1",
-            "country": "KR",
-            "city": "서울",
             "timezone": "Asia/Seoul",
             "student_contact": "01011112222",
             "parent_name": "",

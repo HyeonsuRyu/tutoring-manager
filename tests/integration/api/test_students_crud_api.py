@@ -14,8 +14,6 @@ def test_create_student_via_api(jwt_api_client, user):
             "name": "API학생",
             "birth_year": 2012,
             "grade": "중2",
-            "country": "KR",
-            "city": "서울",
             "timezone": "Asia/Seoul",
             "lesson_duration_minutes": 60,
             "lessons_completed": 0,

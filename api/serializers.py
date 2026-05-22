@@ -50,8 +50,6 @@ class StudentSerializer(serializers.ModelSerializer):
             "birth_year",
             "age",
             "grade",
-            "country",
-            "city",
             "timezone",
             "student_contact",
             "parent_name",

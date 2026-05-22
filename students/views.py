@@ -7,7 +7,7 @@ from django.views import View
 from django.views.generic import CreateView, DeleteView, DetailView, ListView, UpdateView
 
 from core.contact_mask import mask_contact
-from core.timezone_suggest import suggest_timezone
+from core.timezone_suggest import list_common_timezones
 from students.forms import GoalHistoryEntryForm, ScheduleSlotFormSet, StudentDetailForm, StudentForm, SubjectForm
 from students.models import GoalHistoryEntry, Student, StudentDetail, Subject
 
@@ -53,8 +53,8 @@ class StudentFormMixin(OwnerQuerysetMixin):
             ctx["slot_formset"] = ScheduleSlotFormSet(self.request.POST, instance=self.object)
         else:
             ctx["slot_formset"] = ScheduleSlotFormSet(instance=self.object)
-        obj = self.object or Student(country="KR")
-        ctx["timezone_suggestions"] = suggest_timezone(obj.country, obj.city)
+        tz = getattr(self.object, "timezone", None) or "Asia/Seoul"
+        ctx["timezone_suggestions"] = list_common_timezones(tz)
         return ctx
 
     @transaction.atomic
@@ -161,9 +161,8 @@ class StudentDetailView(OwnerQuerysetMixin, DetailView):
 
 class TimezoneSuggestView(LoginRequiredMixin, View):
     def get(self, request):
-        country = request.GET.get("country", "KR")
-        city = request.GET.get("city", "")
-        return JsonResponse({"suggestions": suggest_timezone(country, city)})
+        current = request.GET.get("timezone", "")
+        return JsonResponse({"suggestions": list_common_timezones(current)})
 
 
 class SubjectListView(LoginRequiredMixin, ListView):
