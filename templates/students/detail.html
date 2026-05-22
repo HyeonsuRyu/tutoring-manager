@@ -8,12 +8,14 @@
   </div>
   <div class="page-actions">
     <a href="{% url 'student-update' student.pk %}" class="btn">수정</a>
-    <a href="{% url 'student-progress' student.pk %}" class="btn btn-secondary">진도차트</a>
     <a href="{% url 'home' %}" class="btn btn-secondary">달력</a>
   </div>
 </header>
 {% endblock %}
 {% block content %}
+<div class="student-page-tabs">
+  {% include "students/_student_tabs.html" with active_tab="detail" %}
+</div>
 <div class="card">
   {% if edit_lesson %}
   <div class="card" style="background:#f0f9ff;border-color:#bae6fd">

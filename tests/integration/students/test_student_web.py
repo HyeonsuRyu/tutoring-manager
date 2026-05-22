@@ -8,6 +8,16 @@ from students.models import GoalHistoryEntry, Student, StudentDetail, Subject
 
 
 @pytest.mark.integration
+def test_student_create_form_korean_labels(logged_in_client):
+    res = logged_in_client.get("/students/new/")
+    assert res.status_code == 200
+    html = res.content.decode()
+    assert "<label" in html
+    for label in ("이름", "출생 연도", "학년", "시간대", "정규 수업 슬롯"):
+        assert label in html
+
+
+@pytest.mark.integration
 def test_student_list_and_create(logged_in_client, user):
     res = logged_in_client.get("/students/")
     assert res.status_code == 200
@@ -75,7 +85,17 @@ def test_student_detail_memo_and_history(logged_in_client, student):
 def test_student_progress_page(logged_in_client, student):
     res = logged_in_client.get(f"/students/{student.pk}/progress/")
     assert res.status_code == 200
-    assert "진도차트" in res.content.decode()
+    html = res.content.decode()
+    assert "진도차트" in html
+    assert 'class="tab is-active"' in html or "tab is-active" in html
+
+
+def test_student_detail_has_progress_tab(logged_in_client, student):
+    res = logged_in_client.get(f"/students/{student.pk}/")
+    assert res.status_code == 200
+    html = res.content.decode()
+    assert "student-progress" in html or f"/students/{student.pk}/progress/" in html
+    assert "진도차트" in html
 
 
 @pytest.mark.integration

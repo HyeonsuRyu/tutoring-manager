@@ -46,6 +46,21 @@ class StudentForm(forms.ModelForm):
             "lessons_completed",
             "subjects",
         ]
+        labels = {
+            "name": "이름",
+            "birth_year": "출생 연도",
+            "grade": "학년",
+            "country": "국가",
+            "city": "도시",
+            "timezone": "시간대",
+            "student_contact": "학생 연락처",
+            "parent_name": "보호자 이름",
+            "parent_contact": "보호자 연락처",
+            "hourly_rate": "시간당 수업료",
+            "lesson_duration_minutes": "수업 시간(분)",
+            "lessons_completed": "완료 회차",
+            "subjects": "과목",
+        }
         widgets = {
             "subjects": forms.CheckboxSelectMultiple,
             "timezone": forms.TextInput(attrs={"list": "timezone-suggestions"}),
@@ -57,9 +72,27 @@ class StudentForm(forms.ModelForm):
             self.fields["subjects"].queryset = Subject.objects.filter(owner=owner)
 
 
+class ScheduleSlotForm(forms.ModelForm):
+    class Meta:
+        model = ScheduleSlot
+        fields = ["day_of_week", "start_time", "end_time", "note"]
+        labels = {
+            "day_of_week": "요일",
+            "start_time": "시작 시간",
+            "end_time": "종료 시간",
+            "note": "메모",
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if "DELETE" in self.fields:
+            self.fields["DELETE"].label = "삭제"
+
+
 ScheduleSlotFormSet = inlineformset_factory(
     Student,
     ScheduleSlot,
+    form=ScheduleSlotForm,
     fields=["day_of_week", "start_time", "end_time", "note"],
     extra=1,
     can_delete=True,

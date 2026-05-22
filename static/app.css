@@ -443,6 +443,51 @@ tbody tr:last-child td {
   color: #fff;
 }
 
+.tabs {
+  display: inline-flex;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  background: var(--bg);
+  margin-bottom: 1rem;
+}
+
+.tabs .tab {
+  display: inline-block;
+  padding: 0.45rem 1rem;
+  font-weight: 600;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  text-decoration: none;
+  border-right: 1px solid var(--border);
+  transition: background 0.15s, color 0.15s;
+}
+
+.tabs .tab:last-child {
+  border-right: none;
+}
+
+.tabs .tab:hover {
+  color: var(--text);
+  background: var(--surface);
+}
+
+.tabs .tab.is-active {
+  background: var(--primary);
+  color: #fff;
+}
+
+.student-page-tabs {
+  padding: 0 1.75rem;
+  margin-top: -0.25rem;
+}
+
+@media (max-width: 900px) {
+  .student-page-tabs {
+    padding: 0 1rem;
+  }
+}
+
 .messages {
   list-style: none;
   padding: 0;
