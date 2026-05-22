@@ -1,0 +1,68 @@
+"""IANA timezone suggestions from country/city. See docs/students.md."""
+
+from __future__ import annotations
+
+from zoneinfo import available_timezones
+
+# Country default + city overrides (MVP mapping table)
+_COUNTRY_DEFAULT: dict[str, str] = {
+    "KR": "Asia/Seoul",
+    "JP": "Asia/Tokyo",
+    "US": "America/New_York",
+    "GB": "Europe/London",
+    "CN": "Asia/Shanghai",
+    "AU": "Australia/Sydney",
+    "CA": "America/Toronto",
+    "DE": "Europe/Berlin",
+    "FR": "Europe/Paris",
+    "SG": "Asia/Singapore",
+    "VN": "Asia/Ho_Chi_Minh",
+    "TH": "Asia/Bangkok",
+}
+
+_CITY_OVERRIDES: dict[tuple[str, str], str] = {
+    ("KR", "서울"): "Asia/Seoul",
+    ("KR", "부산"): "Asia/Seoul",
+    ("KR", "제주"): "Asia/Seoul",
+    ("US", "Los Angeles"): "America/Los_Angeles",
+    ("US", "New York"): "America/New_York",
+    ("US", "Chicago"): "America/Chicago",
+    ("US", "Seattle"): "America/Los_Angeles",
+    ("GB", "London"): "Europe/London",
+    ("AU", "Sydney"): "Australia/Sydney",
+    ("AU", "Melbourne"): "Australia/Melbourne",
+    ("CA", "Vancouver"): "America/Vancouver",
+    ("CA", "Toronto"): "America/Toronto",
+}
+
+
+def suggest_timezone(country: str, city: str = "") -> list[str]:
+    country = (country or "KR").strip().upper()
+    city_key = (city or "").strip()
+    suggestions: list[str] = []
+
+    if city_key:
+        override = _CITY_OVERRIDES.get((country, city_key))
+        if override:
+            suggestions.append(override)
+        # partial city match
+        for (c, city_name), tz in _CITY_OVERRIDES.items():
+            if c == country and city_key.lower() in city_name.lower():
+                if tz not in suggestions:
+                    suggestions.append(tz)
+
+    default = _COUNTRY_DEFAULT.get(country, "UTC")
+    if default not in suggestions:
+        suggestions.append(default)
+
+    # common zones for country prefix
+    prefix = country[:2].lower() if len(country) >= 2 else ""
+    for tz in sorted(available_timezones()):
+        if tz.startswith("Asia/") and country in ("KR", "JP", "CN", "SG", "VN", "TH"):
+            if tz not in suggestions and len(suggestions) < 8:
+                suggestions.append(tz)
+        elif tz.startswith("America/") and country == "US" and len(suggestions) < 10:
+            if tz not in suggestions:
+                suggestions.append(tz)
+
+    return suggestions[:10]

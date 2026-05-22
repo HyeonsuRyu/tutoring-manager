@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}과목 설정{% endblock %}
+{% block content %}
+<div class="card">
+  <h1>과목 마스터</h1>
+  <form method="post">{% csrf_token %}{{ form.as_p }}<button type="submit" class="btn">추가</button></form>
+  <table>
+    <thead><tr><th>과목명</th><th></th></tr></thead>
+    <tbody>
+    {% for s in subjects %}
+    <tr>
+      <td>
+        <form method="post" style="display:flex;gap:.5rem;align-items:center">{% csrf_token %}
+          <input type="hidden" name="action" value="update">
+          <input type="hidden" name="subject_id" value="{{ s.pk }}">
+          <input name="name" value="{{ s.name }}" style="max-width:200px">
+          <button type="submit" class="btn btn-secondary">이름 저장</button>
+        </form>
+      </td>
+      <td><a href="{% url 'subject-delete' s.pk %}">삭제</a></td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

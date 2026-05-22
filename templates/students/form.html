@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}{% if object %}학생 수정{% else %}학생 등록{% endif %}{% endblock %}
+{% block content %}
+<div class="card">
+  <h1>{% if object %}학생 수정{% else %}학생 등록{% endif %}</h1>
+  <form method="post" id="student-form">{% csrf_token %}
+    {{ form.as_p }}
+    <h3>정규 수업 슬롯</h3>
+    {{ slot_formset.management_form }}
+    {% for f in slot_formset %}{{ f.as_p }}{% endfor %}
+    <button type="submit" class="btn">저장</button>
+  </form>
+</div>
+<datalist id="grade-suggestions">
+  <option value="초1"><option value="중1"><option value="중2"><option value="고1"><option value="고2"><option value="고3"><option value="N수"><option value="성인">
+</datalist>
+<datalist id="timezone-suggestions">
+  {% for tz in timezone_suggestions %}<option value="{{ tz }}">{% endfor %}
+</datalist>
+{% endblock %}
+{% block extra_js %}
+<script>
+(function() {
+  const country = document.getElementById('id_country');
+  const city = document.getElementById('id_city');
+  const tz = document.getElementById('id_timezone');
+  if (!country || !tz) return;
+  function refreshTz() {
+    const params = new URLSearchParams({country: country.value, city: city ? city.value : ''});
+    fetch('{% url "timezone-suggest" %}?' + params, {credentials: 'same-origin'})
+      .then(r => r.json())
+      .then(data => {
+        const dl = document.getElementById('timezone-suggestions');
+        dl.innerHTML = '';
+        data.suggestions.forEach(z => {
+          const o = document.createElement('option');
+          o.value = z;
+          dl.appendChild(o);
+        });
+        if (!tz.value && data.suggestions.length) tz.value = data.suggestions[0];
+      });
+  }
+  country.addEventListener('change', refreshTz);
+  if (city) city.addEventListener('blur', refreshTz);
+})();
+</script>
+{% endblock %}

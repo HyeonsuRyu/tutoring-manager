@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}주간 수업 현황{% endblock %}
+{% block content %}
+<div class="card">
+  <h1>주간 수업 현황</h1>
+  <form method="get" style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:end;margin-bottom:1rem">
+    <p><label>연도</label><select name="year">{% for y in years %}<option value="{{ y }}" {% if y == year %}selected{% endif %}>{{ y }}</option>{% endfor %}</select></p>
+    <p><label>주차</label><select name="week">{% for w in week_options %}<option value="{{ w.week }}" {% if w.week == week %}selected{% endif %}>{{ w.label }}</option>{% endfor %}</select></p>
+    <button type="submit" class="btn">조회</button>
+  </form>
+  <p class="text-muted">{{ report.label }}</p>
+  <table>
+    <thead>
+      <tr><th>순번</th><th>날짜</th><th>요일</th><th>시간</th><th>과정명</th><th>구분</th><th>이름</th><th>학년</th><th>특이사항</th></tr>
+    </thead>
+    <tbody>
+    {% for row in report.results %}
+    <tr>
+      <td>{{ row.seq }}</td>
+      <td>{{ row.date|default:"" }}</td>
+      <td>{{ row.weekday|default:"" }}</td>
+      <td>{% if row.time_highlight %}<span class="text-danger">{{ row.time }}</span>{% else %}{{ row.time|default:"" }}{% endif %}</td>
+      <td>{{ row.course_name }}</td>
+      <td>{{ row.lesson_kind_display }}</td>
+      <td>{{ row.student_name }}</td>
+      <td>{{ row.grade }}</td>
+      <td>{{ row.remarks }}</td>
+    </tr>
+    {% empty %}
+    <tr><td colspan="9">해당 주 수업이 없습니다.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

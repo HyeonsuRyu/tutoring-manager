@@ -1,0 +1,244 @@
+{% extends "base.html" %}
+{% block title %}홈 달력{% endblock %}
+{% block extra_head %}
+<link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js"></script>
+<style>
+  #event-modal { display:none; position:fixed; inset:0; background:rgba(0,0,0,.4); z-index:100; align-items:center; justify-content:center; }
+  #event-modal.open { display:flex; }
+  #event-modal .inner { background:#fff; padding:1.25rem; border-radius:8px; max-width:480px; width:90%; max-height:90vh; overflow:auto; }
+  .fc-event-proposed { opacity:.55; border:2px dashed #6b7280 !important; }
+  .fc-event-conflict { box-shadow: inset 0 0 0 2px #dc2626 !important; }
+  .fc-event-upcoming { background: #3b82f6 !important; border-color: #3b82f6 !important; }
+  .fc-event-in_progress { background: #f59e0b !important; border-color: #f59e0b !important; }
+  .fc-event-past_incomplete { background: #ef4444 !important; border-color: #ef4444 !important; }
+  .fc-event-completed { background: #22c55e !important; border-color: #22c55e !important; }
+  .fc-event-cancelled { background: #9ca3af !important; border-color: #9ca3af !important; text-decoration: line-through; }
+  .proposal-actions { display:none; position:absolute; z-index:50; background:#fff; border:1px solid #e5e7eb; border-radius:6px; padding:4px; gap:4px; box-shadow:0 2px 8px rgba(0,0,0,.15); }
+  .proposal-actions.visible { display:flex; }
+</style>
+{% endblock %}
+{% block content %}
+<div class="card">
+  <h1>홈 달력</h1>
+  <div id="calendar"></div>
+</div>
+<div id="proposal-hover" class="proposal-actions">
+  <button type="button" class="btn" id="hover-approve" title="승인">✓</button>
+  <button type="button" class="btn btn-secondary" id="hover-dismiss" title="거절">✗</button>
+</div>
+<div id="event-modal">
+  <div class="inner">
+    <h3 id="modal-title"></h3>
+    <p id="modal-sub" class="text-muted"></p>
+    <div id="modal-lesson-fields" style="display:none">
+      <label>수업 내용<textarea id="modal-content" rows="3" style="max-width:100%"></textarea></label>
+      <label>비고<textarea id="modal-notes" rows="2" style="max-width:100%"></textarea></label>
+      <p><button type="button" class="btn" id="modal-save-notes">내용·비고 저장</button></p>
+    </div>
+    <div id="modal-cancel-form" style="display:none">
+      <h4>수업 취소</h4>
+      <label>주체
+        <select id="cancel-by"><option value="student">학생</option><option value="teacher">교사</option></select>
+      </label>
+      <label>사유<input id="cancel-reason" style="max-width:100%"></label>
+      <label>보강
+        <select id="cancel-makeup"><option value="undecided">미정</option><option value="no_makeup">없음</option><option value="scheduled">예정</option></select>
+      </label>
+      <label>보강일<input type="date" id="cancel-makeup-date"></label>
+      <p><button type="button" class="btn btn-secondary" id="modal-cancel-lesson">취소 처리</button></p>
+    </div>
+    <div id="modal-actions"></div>
+    <p style="margin-top:1rem">
+      <a id="modal-student-link" href="#" class="btn btn-secondary">학생 상세</a>
+      <button type="button" class="btn btn-secondary" onclick="closeModal()">닫기</button>
+    </p>
+  </div>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script>
+const UI_COLORS = {
+  proposed: '#9ca3af', upcoming: '#3b82f6', in_progress: '#f59e0b',
+  past_incomplete: '#ef4444', completed: '#22c55e', cancelled: '#9ca3af'
+};
+function getCookie(n) {
+  const v = document.cookie.match('(^|;) ?' + n + '=([^;]*)(;|$)');
+  return v ? v[2] : null;
+}
+function postForm(url, data) {
+  const body = new URLSearchParams(data);
+  return fetch(url, {
+    method: 'POST',
+    headers: {'X-CSRFToken': getCookie('csrftoken'), 'Content-Type': 'application/x-www-form-urlencoded'},
+    credentials: 'same-origin',
+    body
+  }).then(r => r.json());
+}
+function patchLesson(id, payload) {
+  return fetch('/api/v1/lessons/' + id + '/', {
+    method: 'PATCH',
+    headers: {'X-CSRFToken': getCookie('csrftoken'), 'Content-Type': 'application/json'},
+    credentials: 'same-origin',
+    body: JSON.stringify(payload)
+  });
+}
+function closeModal() { document.getElementById('event-modal').classList.remove('open'); }
+let currentEvent = null;
+let calendar;
+const hoverBar = document.getElementById('proposal-hover');
+let hoverEvent = null;
+
+function eventTitle(e) {
+  const base = e.title || e.student_name;
+  const sub = e.subtitle ? '\n' + e.subtitle : '';
+  const bang = e.has_conflict ? ' ‼' : '';
+  return base + bang + sub;
+}
+
+function openModal(e) {
+  currentEvent = e;
+  document.getElementById('modal-title').textContent = (e.title || e.student_name) + (e.has_conflict ? ' ‼' : '');
+  document.getElementById('modal-sub').textContent = e.subtitle || '';
+  document.getElementById('modal-student-link').href = '/students/' + e.student_id + '/';
+  const fields = document.getElementById('modal-lesson-fields');
+  const cancelForm = document.getElementById('modal-cancel-form');
+  const actions = document.getElementById('modal-actions');
+  actions.innerHTML = '';
+  fields.style.display = 'none';
+  cancelForm.style.display = 'none';
+
+  if (e.type === 'lesson' && e.id.startsWith('lesson-')) {
+    const lid = e.id.replace('lesson-', '');
+    fields.style.display = 'block';
+    document.getElementById('modal-content').value = e.lesson_content || '';
+    document.getElementById('modal-notes').value = e.lesson_notes || '';
+    document.getElementById('modal-save-notes').onclick = () => {
+      patchLesson(lid, {
+        lesson_content: document.getElementById('modal-content').value,
+        lesson_notes: document.getElementById('modal-notes').value
+      }).then(() => { closeModal(); calendar.refetchEvents(); });
+    };
+    if (e.status !== 'completed' && e.status !== 'cancelled') {
+      const complete = document.createElement('button');
+      complete.className = 'btn'; complete.textContent = '완료';
+      complete.onclick = () => postForm('/calendar/lessons/' + lid + '/complete/', {})
+        .then(() => { closeModal(); calendar.refetchEvents(); });
+      actions.append(complete);
+      cancelForm.style.display = 'block';
+      document.getElementById('modal-cancel-lesson').onclick = () => {
+        const data = {
+          cancelled_by: document.getElementById('cancel-by').value,
+          cancel_reason: document.getElementById('cancel-reason').value,
+          makeup_status: document.getElementById('cancel-makeup').value,
+        };
+        const md = document.getElementById('cancel-makeup-date').value;
+        if (md) data.makeup_date = md;
+        postForm('/calendar/lessons/' + lid + '/cancel/', data)
+          .then(() => { closeModal(); calendar.refetchEvents(); });
+      };
+    }
+  } else if (e.proposed && e.schedule_slot_id) {
+    const approve = document.createElement('button');
+    approve.className = 'btn'; approve.textContent = '✓ 승인';
+    approve.onclick = () => postForm('{% url "lesson-approve-web" %}', {schedule_slot_id: e.schedule_slot_id, date: e.date})
+      .then(() => { closeModal(); calendar.refetchEvents(); });
+    const dismiss = document.createElement('button');
+    dismiss.className = 'btn btn-secondary'; dismiss.textContent = '✗ 거절';
+    dismiss.onclick = () => postForm('{% url "proposal-dismiss-web" %}', {schedule_slot_id: e.schedule_slot_id, date: e.date})
+      .then(() => { closeModal(); calendar.refetchEvents(); });
+    actions.append(approve, document.createTextNode(' '), dismiss);
+  }
+  document.getElementById('event-modal').classList.add('open');
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  const calEl = document.getElementById('calendar');
+  document.getElementById('hover-approve').onclick = () => {
+    if (!hoverEvent) return;
+    const e = hoverEvent.extendedProps;
+    postForm('{% url "lesson-approve-web" %}', {schedule_slot_id: e.schedule_slot_id, date: e.date})
+      .then(() => { hoverBar.classList.remove('visible'); calendar.refetchEvents(); });
+  };
+  document.getElementById('hover-dismiss').onclick = () => {
+    if (!hoverEvent) return;
+    const e = hoverEvent.extendedProps;
+    postForm('{% url "proposal-dismiss-web" %}', {schedule_slot_id: e.schedule_slot_id, date: e.date})
+      .then(() => { hoverBar.classList.remove('visible'); calendar.refetchEvents(); });
+  };
+
+  calendar = new FullCalendar.Calendar(calEl, {
+    initialView: 'dayGridMonth',
+    headerToolbar: { left: 'prev,next today', center: 'title', right: 'dayGridMonth,timeGridWeek' },
+    locale: 'ko',
+    editable: true,
+    eventDisplay: 'block',
+    events: function(info, success, failure) {
+      fetch('{% url "calendar-events-json" %}?start=' + info.startStr.slice(0,10) + '&end=' + info.endStr.slice(0,10), {credentials: 'same-origin'})
+        .then(r => r.json())
+        .then(data => {
+          success(data.events.map(e => ({
+            id: e.id,
+            title: (e.title || e.student_name) + (e.has_conflict ? ' ‼' : ''),
+            start: e.start,
+            end: e.end,
+            classNames: [
+              e.proposed ? 'fc-event-proposed' : 'fc-event-' + e.ui_state,
+              e.has_conflict ? 'fc-event-conflict' : ''
+            ].filter(Boolean),
+            backgroundColor: e.proposed ? UI_COLORS.proposed : (UI_COLORS[e.ui_state] || '#3b82f6'),
+            editable: !e.proposed && e.status !== 'completed' && e.status !== 'cancelled',
+            extendedProps: e,
+          })));
+        }).catch(failure);
+    },
+    eventDidMount: function(arg) {
+      if (arg.event.extendedProps.proposed) {
+        arg.el.addEventListener('mouseenter', function(ev) {
+          hoverEvent = arg.event;
+          hoverBar.classList.add('visible');
+          hoverBar.style.left = (ev.clientX + 8) + 'px';
+          hoverBar.style.top = (ev.clientY + 8) + 'px';
+        });
+        arg.el.addEventListener('mouseleave', function() {
+          setTimeout(() => { if (!hoverBar.matches(':hover')) hoverBar.classList.remove('visible'); }, 200);
+        });
+      }
+      if (arg.event.extendedProps.subtitle) {
+        const sub = document.createElement('div');
+        sub.className = 'fc-event-sub';
+        sub.style.fontSize = '0.75em';
+        sub.textContent = arg.event.extendedProps.subtitle;
+        const titleEl = arg.el.querySelector('.fc-event-title');
+        if (titleEl && !titleEl.querySelector('.fc-event-sub')) titleEl.appendChild(sub);
+      }
+    },
+    eventClick: function(arg) {
+      const e = arg.event.extendedProps;
+      if (e.proposed) return;
+      arg.jsEvent.preventDefault();
+      let url = '/students/' + e.student_id + '/';
+      if (e.id && e.id.startsWith('lesson-')) {
+        url += '?lesson=' + e.id.replace('lesson-', '');
+      }
+      window.location.href = url;
+    },
+    eventDrop: function(arg) {
+      const e = arg.event.extendedProps;
+      if (e.proposed || e.status === 'completed' || e.status === 'cancelled') { arg.revert(); return; }
+      const lid = e.id.replace('lesson-', '');
+      patchLesson(lid, {start_datetime: arg.event.start.toISOString(), end_datetime: arg.event.end.toISOString()})
+        .catch(() => arg.revert());
+    },
+    eventResize: function(arg) {
+      const e = arg.event.extendedProps;
+      if (e.status === 'completed' || e.status === 'cancelled') { arg.revert(); return; }
+      const lid = e.id.replace('lesson-', '');
+      patchLesson(lid, {start_datetime: arg.event.start.toISOString(), end_datetime: arg.event.end.toISOString()})
+        .catch(() => arg.revert());
+    },
+  });
+  calendar.render();
+});
+</script>
+{% endblock %}

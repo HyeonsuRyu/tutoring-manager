@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}{{ student.name }} 진도차트{% endblock %}
+{% block content %}
+<div class="card">
+  <h1>{{ student.name }} — 진도차트</h1>
+  <p><a href="{% url 'student-detail' student.pk %}">← 학생 상세</a></p>
+  <table>
+    <thead><tr><th>회차</th><th>날짜</th><th>요일</th><th>시간</th><th>수업 내용</th><th>비고</th></tr></thead>
+    <tbody>
+    {% for row in rows %}
+    <tr>
+      <td>{{ row.lesson.lesson_number }}</td>
+      <td>{{ row.lesson.date }}</td>
+      <td>{{ row.weekday }}</td>
+      <td>{{ row.time }}</td>
+      <td>{{ row.lesson.lesson_content|default:"—" }}</td>
+      <td>{{ row.lesson.lesson_notes|default:"—" }}</td>
+    </tr>
+    {% empty %}
+    <tr><td colspan="6">완료된 수업이 없습니다.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

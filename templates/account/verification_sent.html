@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block title %}이메일 확인{% endblock %}
+{% block content %}
+<div class="card" style="max-width:480px;margin:2rem auto">
+  <h1>이메일을 확인해 주세요</h1>
+  <p>가입하신 주소로 인증 링크를 보냈습니다. 메일함(스팸함 포함)을 확인한 뒤 링크를 눌러 주세요.</p>
+  <p class="text-muted">로컬 개발 환경에서는 터미널(콘솔)에 인증 링크가 출력됩니다.</p>
+  <p><a href="{% url 'account_login' %}" class="btn">로그인으로</a></p>
+</div>
+{% endblock %}

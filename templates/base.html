@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}과외 관리{% endblock %}</title>
+  <style>
+    :root { --bg: #f6f7f9; --card: #fff; --border: #e2e5ea; --primary: #2563eb; --muted: #6b7280; }
+    * { box-sizing: border-box; }
+    body { font-family: system-ui, sans-serif; margin: 0; background: var(--bg); color: #111; }
+    nav { background: var(--card); border-bottom: 1px solid var(--border); padding: .75rem 1.5rem; display: flex; gap: 1rem; align-items: center; flex-wrap: wrap; }
+    nav a { color: var(--primary); text-decoration: none; }
+    nav .spacer { flex: 1; }
+    main { max-width: 1100px; margin: 1.5rem auto; padding: 0 1rem; }
+    .card { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 1.25rem; margin-bottom: 1rem; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { border-bottom: 1px solid var(--border); padding: .5rem .75rem; text-align: left; }
+    .btn { display: inline-block; padding: .4rem .9rem; background: var(--primary); color: #fff; border-radius: 6px; text-decoration: none; border: none; cursor: pointer; font-size: .9rem; }
+    .btn-secondary { background: #e5e7eb; color: #111; }
+    .text-danger { color: #dc2626; }
+    .text-muted { color: var(--muted); font-size: .875rem; }
+    .messages { list-style: none; padding: 0; }
+    .messages li { padding: .5rem; margin-bottom: .5rem; background: #dbeafe; border-radius: 4px; }
+    form p { margin: .5rem 0; }
+    label { display: block; font-weight: 500; margin-bottom: .25rem; }
+    input, select, textarea { width: 100%; max-width: 400px; padding: .4rem; border: 1px solid var(--border); border-radius: 4px; }
+  </style>
+  {% block extra_head %}{% endblock %}
+</head>
+<body>
+  {% if user.is_authenticated %}
+  <nav>
+    <a href="{% url 'home' %}">달력</a>
+    <a href="{% url 'student-list' %}">학생</a>
+    <a href="{% url 'weekly-report' %}">주간 수업 현황</a>
+    <a href="{% url 'subject-list' %}">과목 설정</a>
+    <a href="{% url 'account_email' %}">계정</a>
+    <a href="{% url 'totp-setup' %}">2FA</a>
+    <span class="spacer"></span>
+    <span class="text-muted">{{ user.email }}</span>
+    <form method="post" action="{% url 'account_logout' %}" style="display:inline">{% csrf_token %}<button type="submit" class="btn btn-secondary">로그아웃</button></form>
+  </nav>
+  {% endif %}
+  <main>
+    {% if messages %}<ul class="messages">{% for m in messages %}<li>{{ m }}</li>{% endfor %}</ul>{% endif %}
+    {% block content %}{% endblock %}
+  </main>
+  {% block extra_js %}{% endblock %}
+</body>
+</html>

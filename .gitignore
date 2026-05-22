@@ -138,6 +138,7 @@ celerybeat.pid
 .env
 .envrc
 .venv
+# uv creates .venv by default; keep lockfile in git
 env/
 venv/
 ENV/

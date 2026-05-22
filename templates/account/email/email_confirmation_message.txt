@@ -1,0 +1,13 @@
+{% extends "account/email/base_message.txt" %}
+{% load account %}
+{% block content %}{% autoescape off %}{% user_display user as user_display %}
+안녕하세요.
+
+{{ user_display }}님, Tutoring Manager 이메일 인증 안내입니다.
+
+아래 링크만 브라우저에 붙여 넣거나 클릭해 주세요. (링크 뒤에 다른 글자가 붙지 않도록 주의)
+
+{{ activate_url }}
+
+{% if code %}인증 코드: {{ code }}{% endif %}
+{% endautoescape %}{% endblock content %}
