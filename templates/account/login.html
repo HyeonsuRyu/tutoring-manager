@@ -2,7 +2,7 @@
 {% load socialaccount %}
 {% block title %}로그인{% endblock %}
 {% block content %}
-<div class="card" style="max-width:420px;margin:2rem auto">
+<div class="card auth-card">
   <h1>로그인</h1>
   <form method="post" action="{% url 'account_login' %}">{% csrf_token %}
     {{ form.as_p }}

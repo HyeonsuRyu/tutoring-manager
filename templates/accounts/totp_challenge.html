@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block title %}2단계 인증{% endblock %}
 {% block content %}
-<div class="card" style="max-width:400px;margin:2rem auto">
+<div class="card auth-card">
   <h1>2단계 인증</h1>
   <p>민감한 작업을 위해 인증 앱의 6자리 코드 또는 백업 코드를 입력하세요.</p>
   <form method="post">{% csrf_token %}

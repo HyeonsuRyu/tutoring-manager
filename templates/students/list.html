@@ -1,13 +1,17 @@
 {% extends "base.html" %}
 {% block title %}학생 목록{% endblock %}
-{% block content %}
-<div class="card">
+{% block page_header %}
+<header class="page-header">
   <h1>학생 목록</h1>
-  <p>
+  <div class="page-actions">
     <a href="?sort=name" class="btn btn-secondary">이름순</a>
     <a href="?sort=grade" class="btn btn-secondary">학년순</a>
     <a href="{% url 'student-create' %}" class="btn">학생 등록</a>
-  </p>
+  </div>
+</header>
+{% endblock %}
+{% block content %}
+<div class="card">
   <table>
     <thead><tr><th>이름</th><th>학년</th><th>연락처</th><th>완료/다음 회차</th><th></th></tr></thead>
     <tbody>

@@ -53,10 +53,10 @@
 
 </style>
 {% endblock %}
-{% block content %}
-<div class="card">
+{% block page_header %}
+<header class="page-header">
   <h1>홈 달력</h1>
-  <div class="toolbar-row">
+  <div class="page-actions toolbar-row" style="margin-bottom:0">
     <span class="text-muted">요일 시작</span>
     <div class="segmented" role="group" aria-label="요일 시작">
       <input type="radio" class="segmented-input" name="week-start" id="week-start-0" value="0" checked>
@@ -65,6 +65,10 @@
       <label class="segmented-btn" for="week-start-1">월~일</label>
     </div>
   </div>
+</header>
+{% endblock %}
+{% block content %}
+<div class="card">
   <div id="calendar"></div>
 </div>
 <div id="proposal-hover" class="proposal-actions">

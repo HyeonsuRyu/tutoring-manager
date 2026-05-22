@@ -1,60 +1,60 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="ko">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}과외 관리{% endblock %}</title>
-  <style>
-    :root { --bg: #f6f7f9; --card: #fff; --border: #e2e5ea; --primary: #2563eb; --muted: #6b7280; }
-    * { box-sizing: border-box; }
-    body { font-family: system-ui, sans-serif; margin: 0; background: var(--bg); color: #111; }
-    nav { background: var(--card); border-bottom: 1px solid var(--border); padding: .75rem 1.5rem; display: flex; gap: 1rem; align-items: center; flex-wrap: wrap; }
-    nav a { color: var(--primary); text-decoration: none; }
-    nav .spacer { flex: 1; }
-    main { max-width: 1100px; margin: 1.5rem auto; padding: 0 1rem; }
-    .card { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 1.25rem; margin-bottom: 1rem; }
-    table { width: 100%; border-collapse: collapse; }
-    th, td { border-bottom: 1px solid var(--border); padding: .5rem .75rem; text-align: left; }
-    .btn { display: inline-block; padding: .4rem .9rem; background: var(--primary); color: #fff; border-radius: 6px; text-decoration: none; border: none; cursor: pointer; font-size: .9rem; }
-    .btn-secondary { background: #e5e7eb; color: #111; }
-    .text-danger { color: #dc2626; }
-    .text-muted { color: var(--muted); font-size: .875rem; }
-    .toolbar-row { display: flex; align-items: center; gap: .75rem; flex-wrap: wrap; margin-bottom: .75rem; }
-    .segmented { display: inline-flex; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
-    .segmented-input { position: absolute; opacity: 0; width: 0; height: 0; pointer-events: none; }
-    .segmented .segmented-btn {
-      display: inline-block; margin: 0; padding: .4rem .9rem; font-weight: 500; font-size: .9rem;
-      background: #e5e7eb; color: #111; border: none; border-right: 1px solid var(--border);
-      cursor: pointer; white-space: nowrap;
-    }
-    .segmented .segmented-btn:last-of-type { border-right: none; }
-    .segmented-input:checked + .segmented-btn { background: var(--primary); color: #fff; }
-    .messages { list-style: none; padding: 0; }
-    .messages li { padding: .5rem; margin-bottom: .5rem; background: #dbeafe; border-radius: 4px; }
-    form p { margin: .5rem 0; }
-    label { display: block; font-weight: 500; margin-bottom: .25rem; }
-    input, select, textarea { width: 100%; max-width: 400px; padding: .4rem; border: 1px solid var(--border); border-radius: 4px; }
-  </style>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+  <link rel="stylesheet" href="{% static 'app.css' %}">
   {% block extra_head %}{% endblock %}
 </head>
-<body>
+<body class="{% if user.is_authenticated %}app-authenticated{% else %}app-guest{% endif %}">
   {% if user.is_authenticated %}
-  <nav>
-    <a href="{% url 'home' %}">달력</a>
-    <a href="{% url 'student-list' %}">학생</a>
-    <a href="{% url 'weekly-report' %}">주간 수업 현황</a>
-    <a href="{% url 'subject-list' %}">과목 설정</a>
-    <a href="{% url 'account_email' %}">계정</a>
-    <a href="{% url 'totp-setup' %}">2FA</a>
-    <span class="spacer"></span>
-    <span class="text-muted">{{ user.email }}</span>
-    <form method="post" action="{% url 'account_logout' %}" style="display:inline">{% csrf_token %}<button type="submit" class="btn btn-secondary">로그아웃</button></form>
-  </nav>
+  <div class="app-shell">
+    <aside class="sidebar" aria-label="주 메뉴">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true">TM</div>
+        <div>
+          <div class="brand-title">Tutoring Manager</div>
+          <div class="brand-sub">과외 일정·학생 관리</div>
+        </div>
+      </div>
+      <nav class="nav-section" aria-label="메뉴">
+        <a href="{% url 'home' %}" class="nav-link{% if request.resolver_match.url_name == 'home' %} is-active{% endif %}">달력</a>
+        <a href="{% url 'student-list' %}" class="nav-link{% if request.path|slice:':10' == '/students/' %} is-active{% endif %}">학생</a>
+        <a href="{% url 'weekly-report' %}" class="nav-link{% if request.resolver_match.url_name == 'weekly-report' %} is-active{% endif %}">주간 수업 현황</a>
+        <a href="{% url 'subject-list' %}" class="nav-link{% if request.resolver_match.url_name == 'subject-list' %} is-active{% endif %}">과목 설정</a>
+      </nav>
+      <nav class="nav-section" aria-label="계정">
+        <span class="nav-section-label">계정</span>
+        <a href="{% url 'account_email' %}" class="nav-link{% if request.resolver_match.url_name == 'account_email' %} is-active{% endif %}">이메일·비밀번호</a>
+        <a href="{% url 'totp-setup' %}" class="nav-link{% if request.resolver_match.url_name == 'totp-setup' or request.resolver_match.url_name == 'totp-disable' %} is-active{% endif %}">2단계 인증</a>
+      </nav>
+      <div class="sidebar-footer">
+        <div class="user-chip">{{ user.email }}</div>
+        <form method="post" action="{% url 'account_logout' %}">{% csrf_token %}
+          <button type="submit" class="btn btn-secondary" style="width:100%">로그아웃</button>
+        </form>
+      </div>
+    </aside>
+    <div class="app-main">
+      {% block page_header %}{% endblock %}
+      <div class="app-content">
+  {% else %}
+  <main class="guest-main">
   {% endif %}
-  <main>
-    {% if messages %}<ul class="messages">{% for m in messages %}<li>{{ m }}</li>{% endfor %}</ul>{% endif %}
-    {% block content %}{% endblock %}
+        {% if messages %}
+        <ul class="messages">{% for m in messages %}<li>{{ m }}</li>{% endfor %}</ul>
+        {% endif %}
+        {% block content %}{% endblock %}
+  {% if user.is_authenticated %}
+      </div>
+    </div>
+  </div>
+  {% else %}
   </main>
+  {% endif %}
   {% block extra_js %}{% endblock %}
 </body>
 </html>
