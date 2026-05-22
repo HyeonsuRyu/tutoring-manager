@@ -13,10 +13,25 @@ def test_student_create_form_korean_labels(logged_in_client):
     assert res.status_code == 200
     html = res.content.decode()
     assert "<label" in html
-    for label in ("이름", "출생 연도", "학년", "시간대", "정규 수업 슬롯"):
+    for label in ("이름", "출생 연도", "학년", "시간대", "학부모 성함", "메모", "정규 수업", "1회 수업"):
         assert label in html
+    assert "보호자" not in html
     assert "국가" not in html
     assert "도시" not in html
+    assert "slot-add" in html
+    assert "slot-remove-btn" in html
+    assert "10,000" in html
+    assert "hourly-rate-suffix" in html
+    assert "대한민국" in html
+
+
+@pytest.mark.integration
+def test_student_create_without_subjects_shows_settings_button(logged_in_client, user):
+    Subject.objects.filter(owner=user).delete()
+    res = logged_in_client.get("/students/new/")
+    html = res.content.decode()
+    assert "과목 설정에서" in html
+    assert 'target="_blank"' in html
 
 
 @pytest.mark.integration

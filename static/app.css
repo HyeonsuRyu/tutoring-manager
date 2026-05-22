@@ -598,3 +598,311 @@ textarea:focus {
     padding: 0.75rem 1rem 1.5rem;
   }
 }
+
+/* Student registration form */
+.student-form-card .form-panels-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.student-form-card .form-panels-row .form-panel {
+  margin-bottom: 0;
+  min-height: 100%;
+}
+
+.student-form-card .form-panel {
+  margin-bottom: 1rem;
+  padding: 1rem 1.15rem;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+
+.student-form-card .form-panel-title {
+  margin: 0 0 0.85rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-secondary);
+}
+
+.student-form-card .form-panel-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  width: 100%;
+  gap: 0.85rem;
+  align-items: start;
+}
+
+.student-form-card .form-panel .form-field {
+  display: grid;
+  grid-template-columns: 6.75rem minmax(0, 1fr);
+  gap: 0.35rem 0.65rem;
+  align-items: center;
+  min-width: 0;
+}
+
+.student-form-card .form-panel .form-field label {
+  grid-column: 1;
+  grid-row: 1;
+  margin: 0;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  white-space: nowrap;
+  line-height: 1.25;
+  text-align: right;
+}
+
+.student-form-card .form-panel .form-field input,
+.student-form-card .form-panel .form-field select,
+.student-form-card .form-panel .form-field .hourly-rate-wrap {
+  grid-column: 2;
+  grid-row: 1;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.student-form-card .form-panel .form-field .errorlist {
+  grid-column: 1 / -1;
+  margin: 0;
+}
+
+.student-form-card .form-panel .form-field .field-hint {
+  grid-column: 2;
+  margin: 0;
+  text-align: right;
+}
+
+.student-form-card .form-field input,
+.student-form-card .form-field select,
+.student-form-card .form-field textarea {
+  box-sizing: border-box;
+}
+
+.student-form-card .form-field--memo {
+  max-width: 36rem;
+}
+
+.student-form-card .form-field--memo label {
+  display: block;
+  margin-bottom: 0.35rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+.student-form-card .form-field--memo textarea {
+  width: 100%;
+  max-width: 100%;
+}
+
+.student-form-card .timezone-select {
+  width: 100%;
+}
+
+@media (max-width: 960px) {
+  .student-form-card .form-panels-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+.field-hint {
+  display: block;
+  margin-top: 0.2rem;
+  font-size: 0.75rem;
+  color: var(--primary);
+  font-weight: 500;
+}
+
+.hourly-rate-wrap {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.hourly-rate-wrap .hourly-rate-input {
+  flex: 1;
+  min-width: 0;
+  text-align: right;
+}
+
+.hourly-rate-suffix {
+  font-weight: 600;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.student-form-card .form-section {
+  margin-top: 1.25rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--border);
+}
+
+.form-submit-row {
+  margin-top: 1.25rem;
+}
+
+.subjects-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+}
+
+.subjects-section-head .field-label {
+  font-weight: 600;
+  font-size: 0.85rem;
+}
+
+.subject-settings-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--text-secondary);
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-decoration: none;
+  line-height: 1;
+}
+
+.subject-settings-btn:hover {
+  background: var(--primary-soft);
+  color: var(--primary);
+  border-color: var(--primary);
+}
+
+.subjects-empty-btn {
+  display: block;
+  width: 100%;
+  text-align: center;
+}
+
+.subjects-checkboxes ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+}
+
+.subjects-checkboxes li label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-weight: normal;
+  margin: 0;
+}
+
+.subjects-checkboxes input {
+  width: auto;
+  max-width: none;
+}
+
+.schedule-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.75rem;
+}
+
+.schedule-section-head h3 {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.slot-add-btn {
+  min-width: 2.25rem;
+  padding: 0.35rem 0.65rem;
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
+.schedule-slot-row {
+  padding: 0.85rem 1rem;
+  margin-bottom: 0.65rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+
+.schedule-slot-row-inner {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.schedule-slot-row-inner .slot-day {
+  flex: 0 0 auto;
+  min-width: 8rem;
+}
+
+.schedule-slot-row-inner .slot-time-block {
+  flex: 1 1 12rem;
+}
+
+.slot-remove-btn {
+  flex: 0 0 auto;
+  min-width: 2.25rem;
+  padding: 0.35rem 0.55rem;
+  font-size: 1.15rem;
+  line-height: 1;
+  margin-left: auto;
+  align-self: center;
+}
+
+.schedule-slot-row .slot-day {
+  margin: 0 0 0.5rem;
+}
+
+.schedule-slot-row .slot-day select {
+  max-width: 10rem;
+}
+
+.slot-time-block .field-label {
+  display: block;
+  font-weight: 600;
+  font-size: 0.85rem;
+  margin-bottom: 0.35rem;
+}
+
+.slot-time-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.5rem;
+}
+
+.slot-time-field input,
+.slot-time-field select,
+.slot-time-select {
+  width: auto;
+  max-width: 8.5rem;
+  min-width: 6.5rem;
+}
+
+.slot-time-sep {
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+.slot-duration {
+  min-width: 2rem;
+  text-align: right;
+  font-weight: 700;
+  color: var(--primary);
+}
+
+.slot-duration-unit {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}

@@ -7,7 +7,6 @@ from django.views import View
 from django.views.generic import CreateView, DeleteView, DetailView, ListView, UpdateView
 
 from core.contact_mask import mask_contact
-from core.timezone_suggest import list_common_timezones
 from students.forms import GoalHistoryEntryForm, ScheduleSlotFormSet, StudentDetailForm, StudentForm, SubjectForm
 from students.models import GoalHistoryEntry, Student, StudentDetail, Subject
 
@@ -47,14 +46,22 @@ class StudentFormMixin(OwnerQuerysetMixin):
         kwargs["owner"] = self.request.user
         return kwargs
 
+    def _detail_instance(self):
+        if self.object and StudentDetail.objects.filter(student=self.object).exists():
+            return StudentDetail.objects.get(student=self.object)
+        return None
+
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
         if self.request.POST:
             ctx["slot_formset"] = ScheduleSlotFormSet(self.request.POST, instance=self.object)
+            ctx["detail_form"] = StudentDetailForm(
+                self.request.POST, instance=self._detail_instance(), prefix="detail"
+            )
         else:
             ctx["slot_formset"] = ScheduleSlotFormSet(instance=self.object)
-        tz = getattr(self.object, "timezone", None) or "Asia/Seoul"
-        ctx["timezone_suggestions"] = list_common_timezones(tz)
+            ctx["detail_form"] = StudentDetailForm(instance=self._detail_instance(), prefix="detail")
+        ctx["has_subjects"] = Subject.objects.filter(owner=self.request.user).exists()
         return ctx
 
     @transaction.atomic
@@ -69,7 +76,12 @@ class StudentFormMixin(OwnerQuerysetMixin):
         if not slot_formset.is_valid():
             return self.render_to_response(self.get_context_data(form=form, slot_formset=slot_formset))
         slot_formset.save()
-        StudentDetail.objects.get_or_create(student=self.object)
+        detail, _ = StudentDetail.objects.get_or_create(student=self.object)
+        detail_form = StudentDetailForm(
+            self.request.POST, instance=detail, prefix="detail"
+        )
+        if detail_form.is_valid():
+            detail_form.save()
         return HttpResponseRedirect(self.get_success_url())
 
 

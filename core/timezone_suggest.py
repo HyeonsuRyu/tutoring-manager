@@ -99,3 +99,36 @@ def list_common_timezones(current: str = "") -> list[str]:
         if tz not in out:
             out.append(tz)
     return out
+
+
+TIMEZONE_LABELS_KO: dict[str, str] = {
+    "Asia/Seoul": "대한민국 · 서울",
+    "Asia/Tokyo": "일본 · 도쿄",
+    "Asia/Shanghai": "중국 · 상하이",
+    "Asia/Singapore": "싱가포르",
+    "Asia/Ho_Chi_Minh": "베트남 · 호치민",
+    "Asia/Bangkok": "태국 · 방콕",
+    "Asia/Dubai": "아랍에미리트 · 두바이",
+    "Europe/London": "영국 · 런던",
+    "Europe/Berlin": "독일 · 베를린",
+    "Europe/Paris": "프랑스 · 파리",
+    "America/New_York": "미국 · 뉴욕(동부)",
+    "America/Chicago": "미국 · 시카고(중부)",
+    "America/Los_Angeles": "미국 · 로스앤젤레스(태평양)",
+    "America/Toronto": "캐나다 · 토론토",
+    "Australia/Sydney": "호주 · 시드니",
+    "Pacific/Auckland": "뉴질랜드 · 오클랜드",
+    "UTC": "UTC (협정 세계시)",
+}
+
+
+def timezone_label_ko(tz: str) -> str:
+    return TIMEZONE_LABELS_KO.get(tz, tz.replace("_", " ").replace("/", " · "))
+
+
+def timezone_choices_ko(current: str = "") -> list[tuple[str, str]]:
+    """Select choices: (IANA id, Korean label)."""
+    choices: list[tuple[str, str]] = [("", "시간대 선택")]
+    for tz in list_common_timezones(current):
+        choices.append((tz, timezone_label_ko(tz)))
+    return choices

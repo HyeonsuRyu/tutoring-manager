@@ -6,19 +6,405 @@
 </header>
 {% endblock %}
 {% block content %}
-<div class="card">
+<div class="card student-form-card">
   <form method="post" id="student-form">{% csrf_token %}
-    {{ form.as_p }}
-    <h3>정규 수업 슬롯</h3>
-    {{ slot_formset.management_form }}
-    {% for f in slot_formset %}{{ f.as_p }}{% endfor %}
-    <button type="submit" class="btn">저장</button>
+
+    <div class="form-panels-row">
+      <section class="form-panel">
+        <h3 class="form-panel-title">기본 정보</h3>
+        <div class="form-panel-grid">
+          <div class="form-field">
+            {{ form.name.label_tag }}{{ form.name }}{{ form.name.errors }}
+          </div>
+          <div class="form-field">
+            {{ form.birth_year.label_tag }}{{ form.birth_year }}{{ form.birth_year.errors }}
+            <span class="field-hint" id="birth-year-hint" hidden></span>
+          </div>
+          <div class="form-field">
+            {{ form.grade.label_tag }}{{ form.grade }}{{ form.grade.errors }}
+            <span class="field-hint" id="grade-hint" hidden></span>
+          </div>
+          <div class="form-field">
+            {{ form.student_contact.label_tag }}{{ form.student_contact }}{{ form.student_contact.errors }}
+          </div>
+          <div class="form-field">
+            {{ form.timezone.label_tag }}{{ form.timezone }}{{ form.timezone.errors }}
+          </div>
+        </div>
+      </section>
+
+      <section class="form-panel">
+        <h3 class="form-panel-title">학부모</h3>
+        <div class="form-panel-grid">
+          <div class="form-field">
+            {{ form.parent_name.label_tag }}{{ form.parent_name }}{{ form.parent_name.errors }}
+          </div>
+          <div class="form-field">
+            {{ form.parent_contact.label_tag }}{{ form.parent_contact }}{{ form.parent_contact.errors }}
+          </div>
+        </div>
+      </section>
+
+      <section class="form-panel">
+        <h3 class="form-panel-title">수업 설정</h3>
+        <div class="form-panel-grid">
+          <div class="form-field">
+            {{ form.hourly_rate.label_tag }}
+            <div class="hourly-rate-wrap">
+              {{ form.hourly_rate }}
+              <span class="hourly-rate-suffix">원</span>
+            </div>
+            {{ form.hourly_rate.errors }}
+          </div>
+          <div class="form-field">
+            {{ form.lesson_duration_minutes.label_tag }}{{ form.lesson_duration_minutes }}{{ form.lesson_duration_minutes.errors }}
+          </div>
+          <div class="form-field">
+            {{ form.lessons_completed.label_tag }}{{ form.lessons_completed }}{{ form.lessons_completed.errors }}
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <div class="form-section subjects-section">
+      {% if has_subjects %}
+      <div class="subjects-section-head">
+        <span class="field-label">{{ form.subjects.label }}</span>
+        <a href="{% url 'subject-list' %}" target="_blank" rel="noopener" class="subject-settings-btn" title="과목 설정">설정</a>
+      </div>
+      <div class="subjects-checkboxes">{{ form.subjects }}{{ form.subjects.errors }}</div>
+      {% else %}
+      <a href="{% url 'subject-list' %}" target="_blank" rel="noopener" class="btn btn-secondary subjects-empty-btn">과목 설정에서 과목을 먼저 추가하세요 (새 탭)</a>
+      {% endif %}
+    </div>
+
+    <div class="form-section">
+      <div class="form-field form-field--memo">
+        {{ detail_form.long_memo.label_tag }}
+        {{ detail_form.long_memo }}
+        {{ detail_form.long_memo.errors }}
+      </div>
+    </div>
+
+    <div class="form-section schedule-section">
+      <div class="schedule-section-head">
+        <h3>정규 수업</h3>
+        <button type="button" class="btn btn-secondary slot-add-btn" id="slot-add" aria-label="수업 슬롯 추가">+</button>
+      </div>
+      {{ slot_formset.management_form }}
+      <div id="slot-forms">
+        {% for f in slot_formset %}
+        <div class="schedule-slot-row" data-slot-form>
+          {% for hidden in f.hidden_fields %}{{ hidden }}{% endfor %}
+          <div class="schedule-slot-row-inner">
+            <p class="slot-day">{{ f.day_of_week.label_tag }}{{ f.day_of_week }}{{ f.day_of_week.errors }}</p>
+            <div class="slot-time-block">
+              <span class="field-label">시간</span>
+              <div class="slot-time-row">
+                <div class="slot-time-field">{{ f.start_time }}</div>
+                <span class="slot-time-sep">~</span>
+                <div class="slot-time-field">{{ f.end_time }}</div>
+                <span class="slot-duration" aria-live="polite">-</span>
+                <span class="slot-duration-unit">분</span>
+              </div>
+              {{ f.start_time.errors }}
+              {{ f.end_time.errors }}
+            </div>
+            <button type="button" class="btn btn-secondary slot-remove-btn" aria-label="슬롯 삭제" title="삭제">−</button>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <p class="form-submit-row"><button type="submit" class="btn">저장</button></p>
   </form>
 </div>
 <datalist id="grade-suggestions">
   <option value="초1"><option value="중1"><option value="중2"><option value="고1"><option value="고2"><option value="고3"><option value="N수"><option value="성인">
 </datalist>
-<datalist id="timezone-suggestions">
-  {% for tz in timezone_suggestions %}<option value="{{ tz }}">{% endfor %}
-</datalist>
+<datalist id="birth-year-suggestions"></datalist>
+{% endblock %}
+{% block extra_js %}
+<script>
+(function() {
+  const GRADE_ORDER = [];
+  for (let i = 1; i <= 6; i++) GRADE_ORDER.push('초' + i);
+  for (let i = 1; i <= 3; i++) GRADE_ORDER.push('중' + i, '고' + i);
+
+  function schoolYear() {
+    const d = new Date();
+    return d.getMonth() + 1 >= 3 ? d.getFullYear() : d.getFullYear() - 1;
+  }
+
+  function birthYearToGrade(y) {
+    const by = parseInt(y, 10);
+    if (!by) return null;
+    const ys = schoolYear() - by - 7;
+    if (ys < 0) return null;
+    if (ys <= 5) return '초' + (ys + 1);
+    if (ys <= 8) return '중' + (ys - 5);
+    if (ys <= 11) return '고' + (ys - 8);
+    if (ys === 12) return 'N수';
+    return '성인';
+  }
+
+  function gradeToBirthYear(g) {
+    const m = /^(초|중|고)([1-6])$/.exec((g || '').trim());
+    if (!m) return null;
+    const sy = schoolYear();
+    let ys;
+    if (m[1] === '초') ys = parseInt(m[2], 10) - 1;
+    else if (m[1] === '중') ys = 5 + parseInt(m[2], 10);
+    else ys = 8 + parseInt(m[2], 10);
+    return sy - 7 - ys;
+  }
+
+  const birthYearEl = document.querySelector('[data-grade-sync="birth_year"]');
+  const gradeEl = document.querySelector('[data-grade-sync="grade"]');
+  const birthYearHint = document.getElementById('birth-year-hint');
+  const gradeHint = document.getElementById('grade-hint');
+  const birthYearList = document.getElementById('birth-year-suggestions');
+  const touched = { birth_year: false, grade: false };
+
+  function markTouched(key) { touched[key] = true; }
+
+  function showHint(el, text) {
+    if (!el) return;
+    if (text) { el.textContent = '추천: ' + text; el.hidden = false; }
+    else { el.textContent = ''; el.hidden = true; }
+  }
+
+  function fillBirthYearList(around) {
+    if (!birthYearList || !around) return;
+    birthYearList.innerHTML = '';
+    for (let d = -1; d <= 1; d++) {
+      const o = document.createElement('option');
+      o.value = String(around + d);
+      birthYearList.appendChild(o);
+    }
+  }
+
+  function syncFromBirthYear() {
+    if (!birthYearEl || !gradeEl) return;
+    const g = birthYearToGrade(birthYearEl.value);
+    if (!g) { showHint(gradeHint, ''); return; }
+    if (!gradeEl.value.trim() && !touched.grade) {
+      gradeEl.value = g;
+      gradeEl.dataset.auto = '1';
+    }
+    showHint(gradeHint, gradeEl.dataset.auto === '1' ? g : '');
+  }
+
+  function syncFromGrade() {
+    if (!birthYearEl || !gradeEl) return;
+    const y = gradeToBirthYear(gradeEl.value);
+    if (!y) { showHint(birthYearHint, ''); return; }
+    fillBirthYearList(y);
+    if (!birthYearEl.value.trim() && !touched.birth_year) {
+      birthYearEl.value = String(y);
+      birthYearEl.dataset.auto = '1';
+    }
+    showHint(birthYearHint, birthYearEl.dataset.auto === '1' ? String(y) : '');
+  }
+
+  if (birthYearEl) {
+    birthYearEl.addEventListener('input', function() {
+      if (this.dataset.auto === '1') this.dataset.auto = '0';
+      else markTouched('birth_year');
+      syncFromBirthYear();
+    });
+    birthYearEl.addEventListener('change', syncFromBirthYear);
+  }
+  if (gradeEl) {
+    gradeEl.addEventListener('input', function() {
+      if (this.dataset.auto === '1') this.dataset.auto = '0';
+      else markTouched('grade');
+      syncFromGrade();
+    });
+    gradeEl.addEventListener('change', syncFromGrade);
+  }
+
+  const hourlyInput = document.querySelector('.hourly-rate-input');
+  function formatWon(num) {
+    return Number(num).toLocaleString('ko-KR');
+  }
+  function parseWon(str) {
+    return (str || '').replace(/[^\d]/g, '');
+  }
+  if (hourlyInput) {
+    hourlyInput.addEventListener('input', function() {
+      const digits = parseWon(this.value);
+      if (!digits) { this.value = ''; return; }
+      this.value = formatWon(parseInt(digits, 10));
+    });
+    hourlyInput.addEventListener('blur', function() {
+      const digits = parseWon(this.value);
+      this.value = digits ? formatWon(digits) : '';
+    });
+  }
+
+  const DEFAULT_SLOT_TIME = '12:00';
+
+  const TIME_OPTIONS = [];
+  for (let h = 6; h <= 23; h++) {
+    for (let m = 0; m < 60; m += 30) {
+      TIME_OPTIONS.push(String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0'));
+    }
+  }
+
+  function supportsTimeInput() {
+    const i = document.createElement('input');
+    i.setAttribute('type', 'time');
+    return i.type === 'time';
+  }
+
+  function buildFallbackSelect(name, id, value) {
+    const sel = document.createElement('select');
+    sel.className = 'slot-time-select';
+    sel.name = name;
+    if (id) sel.id = id;
+    const v = value || DEFAULT_SLOT_TIME;
+    TIME_OPTIONS.forEach(t => {
+      const o = document.createElement('option');
+      o.value = t;
+      o.textContent = t;
+      if (v === t) o.selected = true;
+      sel.appendChild(o);
+    });
+    return sel;
+  }
+
+  function ensureDefaultSlotTimes(row) {
+    row.querySelectorAll('[name*="start_time"], [name*="end_time"]').forEach(el => {
+      if (!el.value) el.value = DEFAULT_SLOT_TIME;
+    });
+  }
+
+  function initTimeRow(row) {
+    if (supportsTimeInput()) {
+      ensureDefaultSlotTimes(row);
+      return;
+    }
+    row.querySelectorAll('.slot-time-input').forEach(inp => {
+      inp.replaceWith(buildFallbackSelect(inp.name, inp.id, inp.value));
+    });
+  }
+
+  function updateDuration(row) {
+    const out = row.querySelector('.slot-duration');
+    const start = row.querySelector('[name*="start_time"]');
+    const end = row.querySelector('[name*="end_time"]');
+    if (!out || !start || !end) return;
+    if (!start.value || !end.value) { out.textContent = '-'; return; }
+    const [sh, sm] = start.value.split(':').map(Number);
+    const [eh, em] = end.value.split(':').map(Number);
+    if ([sh, sm, eh, em].some(n => Number.isNaN(n))) { out.textContent = '-'; return; }
+    let mins = (eh * 60 + em) - (sh * 60 + sm);
+    if (mins < 0) mins += 24 * 60;
+    out.textContent = String(mins);
+  }
+
+  function bindRow(row) {
+    initTimeRow(row);
+    row.querySelectorAll('[name*="start_time"], [name*="end_time"]').forEach(el => {
+      el.addEventListener('change', () => updateDuration(row));
+      el.addEventListener('input', () => updateDuration(row));
+    });
+    const rm = row.querySelector('.slot-remove-btn');
+    if (rm) rm.addEventListener('click', () => removeSlotRow(row));
+    updateDuration(row);
+  }
+
+  function visibleRows() {
+    return Array.from(document.querySelectorAll('[data-slot-form]')).filter(
+      r => !r.dataset.removed && r.style.display !== 'none'
+    );
+  }
+
+  function updateRemoveButtons() {
+    const rows = visibleRows();
+    rows.forEach(row => {
+      const btn = row.querySelector('.slot-remove-btn');
+      if (btn) btn.hidden = rows.length <= 1;
+    });
+  }
+
+  function syncSlotIndices() {
+    const container = document.getElementById('slot-forms');
+    const totalInput = document.getElementById('id_schedule_slots-TOTAL_FORMS');
+    if (!container || !totalInput) return;
+    const rows = Array.from(container.querySelectorAll('[data-slot-form]'));
+    rows.forEach((row, idx) => {
+      row.querySelectorAll('[name^="schedule_slots-"]').forEach(el => {
+        el.name = el.name.replace(/schedule_slots-\d+-/, 'schedule_slots-' + idx + '-');
+        if (el.id) el.id = el.id.replace(/schedule_slots-\d+-/, 'schedule_slots-' + idx + '-');
+      });
+    });
+    totalInput.value = String(rows.length);
+    updateRemoveButtons();
+  }
+
+  function removeSlotRow(row) {
+    const idInput = row.querySelector('input[name$="-id"]');
+    if (idInput && idInput.value) {
+      row.dataset.removed = '1';
+      row.style.display = 'none';
+      let del = row.querySelector('input[name$="-DELETE"]');
+      if (!del) {
+        del = document.createElement('input');
+        del.type = 'hidden';
+        del.name = idInput.name.replace(/-id$/, '-DELETE');
+        row.appendChild(del);
+      }
+      del.value = 'on';
+      updateRemoveButtons();
+      return;
+    }
+    row.remove();
+    syncSlotIndices();
+  }
+
+  function clearSlotRow(row) {
+    row.querySelectorAll('select, input').forEach(el => {
+      if (el.name && el.name.includes('day_of_week')) el.value = '1';
+      else if (el.name && (el.name.includes('start_time') || el.name.includes('end_time'))) el.value = DEFAULT_SLOT_TIME;
+      else if (el.type === 'hidden' && el.name && el.name.includes('-id')) el.value = '';
+    });
+    row.querySelectorAll('input[name$="-DELETE"]').forEach(el => el.remove());
+    delete row.dataset.removed;
+    row.style.display = '';
+    row.querySelectorAll('.slot-duration').forEach(d => { d.textContent = '-'; });
+  }
+
+  function reindexSlotForm(row, idx) {
+    row.querySelectorAll('[name^="schedule_slots-"]').forEach(el => {
+      el.name = el.name.replace(/schedule_slots-\d+-/, 'schedule_slots-' + idx + '-');
+      if (el.id) el.id = el.id.replace(/schedule_slots-\d+-/, 'schedule_slots-' + idx + '-');
+    });
+  }
+
+  document.querySelectorAll('[data-slot-form]').forEach(bindRow);
+  updateRemoveButtons();
+
+  const addBtn = document.getElementById('slot-add');
+  const formsContainer = document.getElementById('slot-forms');
+  const totalInput = document.getElementById('id_schedule_slots-TOTAL_FORMS');
+
+  if (addBtn && formsContainer && totalInput) {
+    addBtn.addEventListener('click', function() {
+      const rows = visibleRows();
+      const proto = rows[rows.length - 1];
+      const idx = parseInt(totalInput.value, 10);
+      const row = proto.cloneNode(true);
+      reindexSlotForm(row, idx);
+      clearSlotRow(row);
+      formsContainer.appendChild(row);
+      totalInput.value = String(idx + 1);
+      bindRow(row);
+      syncSlotIndices();
+    });
+  }
+})();
+</script>
 {% endblock %}

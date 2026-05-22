@@ -1,6 +1,9 @@
-from django import forms
-from django.forms import inlineformset_factory
+from datetime import time
 
+from django import forms
+from django.forms import BaseInlineFormSet, inlineformset_factory
+
+from core.timezone_suggest import timezone_choices_ko
 from students.models import GoalHistoryEntry, ScheduleSlot, Student, StudentDetail, Subject
 
 GRADE_CHOICES = [
@@ -22,11 +25,33 @@ GRADE_CHOICES = [
     ("기타", "기타"),
 ]
 
+TIME_INPUT_CLASS = "slot-time-input"
+DEFAULT_SLOT_TIME = time(12, 0)
+DEFAULT_HOURLY_RATE = 10000
+
 
 class StudentForm(forms.ModelForm):
     grade = forms.CharField(
         label="학년",
-        widget=forms.TextInput(attrs={"list": "grade-suggestions"}),
+        widget=forms.TextInput(
+            attrs={
+                "list": "grade-suggestions",
+                "autocomplete": "off",
+                "class": "grade-sync-field",
+                "data-grade-sync": "grade",
+            }
+        ),
+    )
+    hourly_rate = forms.CharField(
+        label="시간당 수업료",
+        widget=forms.TextInput(
+            attrs={
+                "class": "hourly-rate-input",
+                "inputmode": "numeric",
+                "autocomplete": "off",
+                "placeholder": "10,000",
+            }
+        ),
     )
 
     class Meta:
@@ -39,7 +64,6 @@ class StudentForm(forms.ModelForm):
             "student_contact",
             "parent_name",
             "parent_contact",
-            "hourly_rate",
             "lesson_duration_minutes",
             "lessons_completed",
             "subjects",
@@ -50,47 +74,101 @@ class StudentForm(forms.ModelForm):
             "grade": "학년",
             "timezone": "시간대",
             "student_contact": "학생 연락처",
-            "parent_name": "보호자 이름",
-            "parent_contact": "보호자 연락처",
-            "hourly_rate": "시간당 수업료",
-            "lesson_duration_minutes": "수업 시간(분)",
+            "parent_name": "학부모 성함",
+            "parent_contact": "학부모 연락처",
+            "lesson_duration_minutes": "1회 수업(분)",
             "lessons_completed": "완료 회차",
             "subjects": "과목",
         }
         widgets = {
             "subjects": forms.CheckboxSelectMultiple,
-            "timezone": forms.TextInput(attrs={"list": "timezone-suggestions"}),
+            "birth_year": forms.NumberInput(
+                attrs={
+                    "class": "grade-sync-field",
+                    "data-grade-sync": "birth_year",
+                    "list": "birth-year-suggestions",
+                    "autocomplete": "off",
+                    "min": "1990",
+                    "max": "2035",
+                }
+            ),
         }
 
     def __init__(self, *args, owner=None, **kwargs):
         super().__init__(*args, **kwargs)
         if owner:
             self.fields["subjects"].queryset = Subject.objects.filter(owner=owner)
+        current_tz = getattr(self.instance, "timezone", None) or "Asia/Seoul"
+        self.fields["timezone"] = forms.ChoiceField(
+            label="시간대",
+            choices=timezone_choices_ko(current_tz),
+            initial=current_tz,
+            widget=forms.Select(attrs={"class": "timezone-select"}),
+        )
+        if self.instance.pk and self.instance.hourly_rate is not None:
+            self.fields["hourly_rate"].initial = f"{int(self.instance.hourly_rate):,}"
+        else:
+            self.fields["hourly_rate"].initial = f"{DEFAULT_HOURLY_RATE:,}"
+
+    def clean_hourly_rate(self):
+        raw = str(self.cleaned_data.get("hourly_rate", "")).replace(",", "").replace("원", "").strip()
+        if not raw:
+            raise forms.ValidationError("시간당 수업료를 입력하세요.")
+        if not raw.isdigit():
+            raise forms.ValidationError("숫자만 입력할 수 있습니다.")
+        return int(raw)
+
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+        instance.hourly_rate = self.cleaned_data["hourly_rate"]
+        if commit:
+            instance.save()
+            self.save_m2m()
+        return instance
 
 
 class ScheduleSlotForm(forms.ModelForm):
-    class Meta:
-        model = ScheduleSlot
-        fields = ["day_of_week", "start_time", "end_time", "note"]
-        labels = {
-            "day_of_week": "요일",
-            "start_time": "시작 시간",
-            "end_time": "종료 시간",
-            "note": "메모",
-        }
-
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         if "DELETE" in self.fields:
-            self.fields["DELETE"].label = "삭제"
+            self.fields["DELETE"].widget = forms.HiddenInput()
+        if not self.instance.pk:
+            for field_name in ("start_time", "end_time"):
+                self.initial.setdefault(field_name, DEFAULT_SLOT_TIME)
+
+    start_time = forms.TimeField(
+        label="시작",
+        widget=forms.TimeInput(attrs={"type": "time", "class": TIME_INPUT_CLASS}),
+    )
+    end_time = forms.TimeField(
+        label="종료",
+        widget=forms.TimeInput(attrs={"type": "time", "class": TIME_INPUT_CLASS}),
+    )
+
+    class Meta:
+        model = ScheduleSlot
+        fields = ["day_of_week", "start_time", "end_time"]
+        labels = {
+            "day_of_week": "요일",
+        }
+
+
+class ScheduleSlotFormSetBase(BaseInlineFormSet):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for form in self.forms:
+            form.empty_permitted = True
 
 
 ScheduleSlotFormSet = inlineformset_factory(
     Student,
     ScheduleSlot,
     form=ScheduleSlotForm,
-    fields=["day_of_week", "start_time", "end_time", "note"],
+    formset=ScheduleSlotFormSetBase,
+    fields=["day_of_week", "start_time", "end_time"],
     extra=1,
+    min_num=0,
+    max_num=20,
     can_delete=True,
 )
 
@@ -99,7 +177,8 @@ class StudentDetailForm(forms.ModelForm):
     class Meta:
         model = StudentDetail
         fields = ["long_memo"]
-        widgets = {"long_memo": forms.Textarea(attrs={"rows": 6})}
+        labels = {"long_memo": "메모"}
+        widgets = {"long_memo": forms.Textarea(attrs={"rows": 3})}
 
 
 class GoalHistoryEntryForm(forms.ModelForm):

@@ -30,7 +30,7 @@ class Student(models.Model):
     student_contact = models.CharField(max_length=64, blank=True)
     parent_name = models.CharField(max_length=128, blank=True)
     parent_contact = models.CharField(max_length=64, blank=True)
-    hourly_rate = models.DecimalField(max_digits=12, decimal_places=0, default=0)
+    hourly_rate = models.DecimalField(max_digits=12, decimal_places=0, default=10000)
     lesson_duration_minutes = models.PositiveSmallIntegerField(default=60)
     lessons_completed = models.PositiveIntegerField(default=0)
     subjects = models.ManyToManyField(Subject, blank=True, related_name="students")
