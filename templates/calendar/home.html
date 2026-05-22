@@ -16,11 +16,55 @@
   .fc-event-cancelled { background: #9ca3af !important; border-color: #9ca3af !important; text-decoration: line-through; }
   .proposal-actions { display:none; position:absolute; z-index:50; background:#fff; border:1px solid #e5e7eb; border-radius:6px; padding:4px; gap:4px; box-shadow:0 2px 8px rgba(0,0,0,.15); }
   .proposal-actions.visible { display:flex; }
+  /* 일(빨강)·토(파랑) — 헤더·날짜 숫자 */
+  .fc .fc-col-header .fc-day-sun .fc-col-header-cell-cushion,
+  .fc .fc-daygrid-day.fc-day-sun .fc-daygrid-day-number,
+  .fc .fc-timegrid-axis-frame + table .fc-day-sun .fc-col-header-cell-cushion,
+  .fc .fc-timegrid-col.fc-day-sun .fc-col-header-cell-cushion { color: #dc2626; font-weight: 600; }
+  .fc .fc-col-header .fc-day-sat .fc-col-header-cell-cushion,
+  .fc .fc-daygrid-day.fc-day-sat .fc-daygrid-day-number,
+  .fc .fc-timegrid-col.fc-day-sat .fc-col-header-cell-cushion { color: #2563eb; font-weight: 600; }
+  /* 주차 — 월요일 칸: 주차(왼쪽)·날짜(오른쪽) 한 줄 */
+  .fc .fc-day-mon .fc-daygrid-day-top.fc-day-top-with-week {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: .25rem;
+    width: 100%;
+    padding: 2px 4px;
+  }
+  .fc .fc-day-mon .fc-daygrid-day-top.fc-day-top-with-week .fc-daygrid-day-number {
+    float: none;
+    margin-left: auto;
+  }
+  .fc .fc-week-number-monday {
+    display: inline-block;
+    flex: 0 0 auto;
+    color: #4b5563;
+    font-size: .7rem;
+    font-weight: 600;
+    line-height: 1.3;
+    text-align: left;
+    background: color-mix(in srgb, #e8eaed 80%, #111827 20%);
+    padding: 1px 5px;
+    border-radius: 4px;
+  }
+
 </style>
 {% endblock %}
 {% block content %}
 <div class="card">
   <h1>홈 달력</h1>
+  <div class="toolbar-row">
+    <span class="text-muted">요일 시작</span>
+    <div class="segmented" role="group" aria-label="요일 시작">
+      <input type="radio" class="segmented-input" name="week-start" id="week-start-0" value="0" checked>
+      <label class="segmented-btn" for="week-start-0">일~토</label>
+      <input type="radio" class="segmented-input" name="week-start" id="week-start-1" value="1">
+      <label class="segmented-btn" for="week-start-1">월~일</label>
+    </div>
+  </div>
   <div id="calendar"></div>
 </div>
 <div id="proposal-hover" class="proposal-actions">
@@ -96,6 +140,56 @@ function eventTitle(e) {
   return base + bang + sub;
 }
 
+const WEEK_START_KEY = 'calendarWeekStart';
+
+function calendarDayClasses(date) {
+  const dow = date.getDay();
+  if (dow === 0) return ['fc-day-sun'];
+  if (dow === 6) return ['fc-day-sat'];
+  return [];
+}
+
+function getIsoWeek(date) {
+  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+  const dayNum = d.getUTCDay() || 7;
+  d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+  return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+}
+
+function clearMondayWeekNumber(container) {
+  if (!container || !container.classList.contains('fc-daygrid-day-top')) return;
+  container.classList.remove('fc-day-top-with-week');
+  container.querySelectorAll('.fc-week-number-monday').forEach(function(el) { el.remove(); });
+}
+
+function attachMondayWeekNumber(container, date) {
+  if (!container || date.getDay() !== 1) return;
+  container.classList.add('fc-day-top-with-week');
+  const el = document.createElement('span');
+  el.className = 'fc-week-number-monday';
+  el.textContent = getIsoWeek(date) + '주';
+  const dayNum = container.querySelector('.fc-daygrid-day-number');
+  if (dayNum) {
+    container.insertBefore(el, dayNum);
+  } else {
+    container.appendChild(el);
+  }
+}
+
+function getWeekStartPreference() {
+  const v = localStorage.getItem(WEEK_START_KEY);
+  return v === '1' ? 1 : 0;
+}
+
+function applyWeekStartPreference(firstDay) {
+  localStorage.setItem(WEEK_START_KEY, String(firstDay));
+  document.querySelectorAll('input[name="week-start"]').forEach(function(radio) {
+    radio.checked = radio.value === String(firstDay);
+  });
+  if (calendar) calendar.setOption('firstDay', firstDay);
+}
+
 function openModal(e) {
   currentEvent = e;
   document.getElementById('modal-title').textContent = (e.title || e.student_name) + (e.has_conflict ? ' ‼' : '');
@@ -154,6 +248,14 @@ function openModal(e) {
 
 document.addEventListener('DOMContentLoaded', function() {
   const calEl = document.getElementById('calendar');
+  const weekStart = getWeekStartPreference();
+  applyWeekStartPreference(weekStart);
+  document.querySelectorAll('input[name="week-start"]').forEach(function(radio) {
+    radio.addEventListener('change', function() {
+      if (!this.checked) return;
+      applyWeekStartPreference(parseInt(this.value, 10));
+    });
+  });
   document.getElementById('hover-approve').onclick = () => {
     if (!hoverEvent) return;
     const e = hoverEvent.extendedProps;
@@ -171,6 +273,17 @@ document.addEventListener('DOMContentLoaded', function() {
     initialView: 'dayGridMonth',
     headerToolbar: { left: 'prev,next today', center: 'title', right: 'dayGridMonth,timeGridWeek' },
     locale: 'ko',
+    firstDay: weekStart,
+    dayHeaderClassNames: function(arg) { return calendarDayClasses(arg.date); },
+    dayCellClassNames: function(arg) { return calendarDayClasses(arg.date); },
+    dayCellDidMount: function(arg) {
+      const top = arg.el.querySelector('.fc-daygrid-day-top');
+      clearMondayWeekNumber(top);
+      attachMondayWeekNumber(top, arg.date);
+    },
+    dayCellDidUnmount: function(arg) {
+      clearMondayWeekNumber(arg.el.querySelector('.fc-daygrid-day-top'));
+    },
     editable: true,
     eventDisplay: 'block',
     events: function(info, success, failure) {

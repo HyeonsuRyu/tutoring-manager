@@ -7,7 +7,14 @@ import pytest
 def test_home_calendar_when_logged_in(logged_in_client):
     res = logged_in_client.get("/")
     assert res.status_code == 200
-    assert "calendar" in res.content.decode().lower()
+    html = res.content.decode()
+    assert "calendar" in html.lower()
+    assert "week-start" in html
+    assert "segmented-btn" in html
+    assert "calendarWeekStart" in html
+    assert "fc-week-number-monday" in html
+    assert "fc-day-sun" in html
+    assert "fc-day-sat" in html
 
 
 @pytest.mark.integration
