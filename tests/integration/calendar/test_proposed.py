@@ -3,7 +3,9 @@
 from datetime import date
 
 from calendar_app.models import Lesson
-from calendar_app.services import approve_proposal, dismiss_proposal, get_proposed_events
+from datetime import timedelta
+
+from calendar_app.services import approve_proposal, dismiss_proposal, get_proposed_events, reschedule_lesson
 
 
 def test_proposed_on_matching_weekday(user, student, schedule_slot):
@@ -29,3 +31,12 @@ def test_approve_creates_lesson(user, student, schedule_slot):
     lesson = approve_proposal(user, schedule_slot.id, date(2026, 3, 16))
     assert Lesson.objects.filter(id=lesson.id).exists()
     assert lesson.lesson_number == 3
+
+
+def test_no_proposed_on_original_date_after_reschedule(user, student, schedule_slot):
+    """Moving an approved lesson should dismiss the slot on the original date."""
+    old = date(2026, 3, 16)
+    lesson = approve_proposal(user, schedule_slot.id, old)
+    reschedule_lesson(lesson, start_datetime=lesson.start_datetime + timedelta(days=2))
+    events = get_proposed_events(user, date(2026, 3, 16), date(2026, 3, 22))
+    assert not any(e.date == old and e.schedule_slot_id == schedule_slot.id for e in events)

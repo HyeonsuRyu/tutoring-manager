@@ -10,7 +10,7 @@ class ScheduleSlotInline(admin.TabularInline):
 
 @admin.register(Student)
 class StudentAdmin(admin.ModelAdmin):
-    list_display = ("name", "grade", "owner", "lessons_completed")
+    list_display = ("name", "grade", "first_lesson_date", "owner", "lessons_completed")
     list_filter = ("owner",)
     inlines = [ScheduleSlotInline]
 

@@ -49,6 +49,9 @@
         <h3 class="form-panel-title">수업 설정</h3>
         <div class="form-panel-grid">
           <div class="form-field">
+            {{ form.first_lesson_date.label_tag }}{{ form.first_lesson_date }}{{ form.first_lesson_date.errors }}
+          </div>
+          <div class="form-field">
             {{ form.hourly_rate.label_tag }}
             <div class="hourly-rate-wrap">
               {{ form.hourly_rate }}

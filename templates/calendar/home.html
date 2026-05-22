@@ -14,8 +14,19 @@
   .fc-event-past_incomplete { background: #ef4444 !important; border-color: #ef4444 !important; }
   .fc-event-completed { background: #22c55e !important; border-color: #22c55e !important; }
   .fc-event-cancelled { background: #9ca3af !important; border-color: #9ca3af !important; text-decoration: line-through; }
-  .proposal-actions { display:none; position:absolute; z-index:50; background:#fff; border:1px solid #e5e7eb; border-radius:6px; padding:4px; gap:4px; box-shadow:0 2px 8px rgba(0,0,0,.15); }
-  .proposal-actions.visible { display:flex; }
+  .proposal-actions {
+    display: none;
+    position: fixed;
+    z-index: 200;
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    padding: 4px;
+    gap: 4px;
+    box-shadow: 0 2px 8px rgba(0,0,0,.15);
+    pointer-events: auto;
+  }
+  .proposal-actions.visible { display: flex; }
   /* 일(빨강)·토(파랑) — 헤더·날짜 숫자 */
   .fc .fc-col-header .fc-day-sun .fc-col-header-cell-cushion,
   .fc .fc-daygrid-day.fc-day-sun .fc-daygrid-day-number,
@@ -70,10 +81,6 @@
 {% block content %}
 <div class="card">
   <div id="calendar"></div>
-</div>
-<div id="proposal-hover" class="proposal-actions">
-  <button type="button" class="btn" id="hover-approve" title="승인">✓</button>
-  <button type="button" class="btn btn-secondary" id="hover-dismiss" title="거절">✗</button>
 </div>
 <div id="event-modal">
   <div class="inner">
@@ -134,8 +141,68 @@ function patchLesson(id, payload) {
 function closeModal() { document.getElementById('event-modal').classList.remove('open'); }
 let currentEvent = null;
 let calendar;
-const hoverBar = document.getElementById('proposal-hover');
+let hoverBar = null;
 let hoverEvent = null;
+let hoverHideTimer = null;
+
+function ensureHoverBar() {
+  if (hoverBar) return hoverBar;
+  hoverBar = document.createElement('div');
+  hoverBar.id = 'proposal-hover';
+  hoverBar.className = 'proposal-actions';
+  hoverBar.innerHTML =
+    '<button type="button" class="btn" id="hover-approve" title="수업 일자 확인">✓</button>' +
+    '<button type="button" class="btn btn-secondary" id="hover-dismiss" title="취소">✗</button>';
+  document.body.appendChild(hoverBar);
+  hoverBar.addEventListener('mouseenter', function() {
+    if (hoverHideTimer) clearTimeout(hoverHideTimer);
+  });
+  hoverBar.addEventListener('mouseleave', function() {
+    hoverBar.classList.remove('visible');
+    hoverEvent = null;
+  });
+  return hoverBar;
+}
+
+function positionHoverBarNearEvent(eventEl) {
+  const bar = ensureHoverBar();
+  const pad = 8;
+  bar.classList.add('visible');
+  bar.style.visibility = 'hidden';
+  bar.style.left = '0';
+  bar.style.top = '0';
+  const barRect = bar.getBoundingClientRect();
+  bar.style.visibility = '';
+  const eventRect = eventEl.getBoundingClientRect();
+  let left = eventRect.right + pad;
+  let top = eventRect.top + (eventRect.height - barRect.height) / 2;
+  if (left + barRect.width > window.innerWidth - pad) {
+    left = eventRect.left - barRect.width - pad;
+  }
+  top = Math.max(pad, Math.min(top, window.innerHeight - barRect.height - pad));
+  bar.style.left = Math.max(pad, left) + 'px';
+  bar.style.top = top + 'px';
+}
+
+function showProposalHover(fcEvent, eventEl) {
+  const bar = ensureHoverBar();
+  hoverEvent = fcEvent;
+  if (hoverHideTimer) clearTimeout(hoverHideTimer);
+  positionHoverBarNearEvent(eventEl);
+}
+
+function hideProposalHoverSoon() {
+  if (hoverHideTimer) clearTimeout(hoverHideTimer);
+  hoverHideTimer = setTimeout(function() {
+    if (!hoverBar || hoverBar.matches(':hover')) return;
+    hoverBar.classList.remove('visible');
+    hoverEvent = null;
+  }, 350);
+}
+
+function isHoverBarTarget(node) {
+  return hoverBar && node && (node === hoverBar || hoverBar.contains(node));
+}
 
 function eventTitle(e) {
   const base = e.title || e.student_name;
@@ -260,6 +327,7 @@ document.addEventListener('DOMContentLoaded', function() {
       applyWeekStartPreference(parseInt(this.value, 10));
     });
   });
+  ensureHoverBar();
   document.getElementById('hover-approve').onclick = () => {
     if (!hoverEvent) return;
     const e = hoverEvent.extendedProps;
@@ -272,6 +340,8 @@ document.addEventListener('DOMContentLoaded', function() {
     postForm('{% url "proposal-dismiss-web" %}', {schedule_slot_id: e.schedule_slot_id, date: e.date})
       .then(() => { hoverBar.classList.remove('visible'); calendar.refetchEvents(); });
   };
+  window.addEventListener('scroll', hideProposalHoverSoon, true);
+  window.addEventListener('resize', hideProposalHoverSoon);
 
   calendar = new FullCalendar.Calendar(calEl, {
     initialView: 'dayGridMonth',
@@ -311,14 +381,12 @@ document.addEventListener('DOMContentLoaded', function() {
     },
     eventDidMount: function(arg) {
       if (arg.event.extendedProps.proposed) {
-        arg.el.addEventListener('mouseenter', function(ev) {
-          hoverEvent = arg.event;
-          hoverBar.classList.add('visible');
-          hoverBar.style.left = (ev.clientX + 8) + 'px';
-          hoverBar.style.top = (ev.clientY + 8) + 'px';
+        arg.el.addEventListener('mouseenter', function() {
+          showProposalHover(arg.event, arg.el);
         });
-        arg.el.addEventListener('mouseleave', function() {
-          setTimeout(() => { if (!hoverBar.matches(':hover')) hoverBar.classList.remove('visible'); }, 200);
+        arg.el.addEventListener('mouseleave', function(ev) {
+          if (isHoverBarTarget(ev.relatedTarget)) return;
+          hideProposalHoverSoon();
         });
       }
       if (arg.event.extendedProps.subtitle) {

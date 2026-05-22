@@ -1,5 +1,7 @@
 """FR-STU-02, STU-07: student create and sort via API."""
 
+from datetime import date
+
 import pytest
 
 from students.models import Student
@@ -15,13 +17,15 @@ def test_create_student_via_api(jwt_api_client, user):
             "birth_year": 2012,
             "grade": "중2",
             "timezone": "Asia/Seoul",
+            "first_lesson_date": "2026-05-01",
             "lesson_duration_minutes": 60,
             "lessons_completed": 0,
         },
         format="json",
     )
     assert res.status_code == 201, res.content
-    assert Student.objects.filter(owner=user, name="API학생").exists()
+    s = Student.objects.get(owner=user, name="API학생")
+    assert s.first_lesson_date == date(2026, 5, 1)
 
 
 @pytest.mark.integration

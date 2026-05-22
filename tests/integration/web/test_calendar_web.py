@@ -15,6 +15,8 @@ def test_home_calendar_when_logged_in(logged_in_client):
     assert "fc-week-number-monday" in html
     assert "fc-day-sun" in html
     assert "fc-day-sat" in html
+    assert "proposal-actions" in html
+    assert "positionHoverBarNearEvent" in html
 
 
 @pytest.mark.integration

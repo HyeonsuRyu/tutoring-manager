@@ -31,6 +31,7 @@ class StudentListSerializer(serializers.ModelSerializer):
             "lessons_completed",
             "next_lesson_number",
             "lesson_duration_minutes",
+            "first_lesson_date",
         ]
 
 
@@ -56,6 +57,7 @@ class StudentSerializer(serializers.ModelSerializer):
             "parent_contact",
             "subject_ids",
             "hourly_rate",
+            "first_lesson_date",
             "lesson_duration_minutes",
             "lessons_completed",
             "next_lesson_number",

@@ -13,7 +13,7 @@ def test_student_create_form_korean_labels(logged_in_client):
     assert res.status_code == 200
     html = res.content.decode()
     assert "<label" in html
-    for label in ("이름", "출생 연도", "학년", "시간대", "학부모 성함", "메모", "정규 수업", "1회 수업"):
+    for label in ("이름", "출생 연도", "학년", "시간대", "학부모 성함", "첫 수업", "메모", "정규 수업", "1회 수업"):
         assert label in html
     assert "보호자" not in html
     assert "국가" not in html
@@ -52,6 +52,7 @@ def test_student_list_and_create(logged_in_client, user):
             "student_contact": "01011112222",
             "parent_name": "",
             "parent_contact": "",
+            "first_lesson_date": "2026-04-01",
             "hourly_rate": "50000",
             "lesson_duration_minutes": 60,
             "lessons_completed": 0,
@@ -68,7 +69,8 @@ def test_student_list_and_create(logged_in_client, user):
         },
     )
     assert res.status_code == 302
-    assert Student.objects.filter(owner=user, name="신규학생").exists()
+    s = Student.objects.get(owner=user, name="신규학생")
+    assert s.first_lesson_date == date(2026, 4, 1)
 
 
 @pytest.mark.integration

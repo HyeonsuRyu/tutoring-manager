@@ -8,6 +8,7 @@ from typing import Any
 from zoneinfo import ZoneInfo
 
 from django.db import transaction
+from django.db.models import F, Q
 from django.utils import timezone as django_tz
 
 from calendar_app.models import Lesson, LessonProposalDismissal
@@ -64,6 +65,13 @@ class CalendarEvent:
         }
 
 
+def is_visible_on_calendar(student: Student, on_date: date) -> bool:
+    """False before first_lesson_date when that field is set."""
+    if student.first_lesson_date is None:
+        return True
+    return on_date >= student.first_lesson_date
+
+
 def iter_dates(start: date, end: date):
     current = start
     while current <= end:
@@ -95,6 +103,10 @@ def get_lessons_for_range(owner, range_start: date, range_end: date) -> list[Les
             date__gte=range_start,
             date__lte=range_end,
         )
+        .filter(
+            Q(student__first_lesson_date__isnull=True)
+            | Q(date__gte=F("student__first_lesson_date"))
+        )
         .select_related("student")
         .order_by("start_datetime")
     )
@@ -120,6 +132,8 @@ def get_proposed_events(owner, range_start: date, range_end: date) -> list[Calen
     for slot in slots:
         student = slot.student
         for d in iter_dates(range_start, range_end):
+            if not is_visible_on_calendar(student, d):
+                continue
             if date_to_slot_day_of_week(d) != slot.day_of_week:
                 continue
             key = (slot.id, d)
@@ -241,6 +255,8 @@ def approve_proposal(owner, schedule_slot_id: int, on_date: date) -> Lesson:
         id=schedule_slot_id, student__owner=owner
     )
     student = slot.student
+    if not is_visible_on_calendar(student, on_date):
+        raise ValueError("Cannot approve a lesson before the student's first lesson date.")
     start = _localize_slot_start(student, slot, on_date)
     end = _lesson_end(start, student)
     return Lesson.objects.create(
@@ -305,15 +321,19 @@ def reschedule_lesson(
     if lesson.status == Lesson.Status.COMPLETED:
         raise ValueError("Completed lessons cannot be rescheduled")
     student = lesson.student
+    old_date = lesson.date
     if end_datetime is None:
         duration = lesson.end_datetime - lesson.start_datetime
         end_datetime = start_datetime + duration
+    new_date = start_datetime.astimezone(ZoneInfo(student.timezone)).date()
     lesson.start_datetime = start_datetime
     lesson.end_datetime = end_datetime
-    lesson.date = start_datetime.astimezone(ZoneInfo(student.timezone)).date()
+    lesson.date = new_date
     lesson.save(
         update_fields=["start_datetime", "end_datetime", "date"]
     )
+    if lesson.schedule_slot_id and old_date != new_date:
+        dismiss_proposal(student.owner, lesson.schedule_slot_id, old_date)
     return lesson
 
 
