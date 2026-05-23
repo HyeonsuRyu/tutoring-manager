@@ -5,7 +5,7 @@
   <div>
     <h1 class="page-header-linked"><a href="{% url 'student-detail' student.pk %}">{{ student.name }}</a></h1>
     <p class="text-muted page-header-sub">
-      수업 #{{ edit_lesson.lesson_number }} · {{ edit_lesson.date }}
+      수업 #{{ edit_lesson.lesson_number }}
       {% if edit_lesson.status == 'completed' %} · 완료{% elif edit_lesson.status == 'cancelled' %} · 취소{% endif %}
     </p>
   </div>
@@ -13,12 +13,30 @@
 {% endblock %}
 {% block content %}
 <div class="card student-form-card lesson-detail-card">
-  {% if edit_lesson.status == 'completed' or edit_lesson.status == 'cancelled' %}
+  {% if edit_lesson.status == 'cancelled' %}
   <section class="form-panel">
     <dl class="form-panel-grid detail-grid">
+      <div class="detail-row"><dt>날짜</dt><dd>{{ lesson_local_date }}</dd></div>
+      <div class="detail-row"><dt>시간</dt><dd>{{ lesson_start_time }} – {{ lesson_end_time }}</dd></div>
       <div class="detail-row"><dt>수업 내용</dt><dd>{{ edit_lesson.lesson_content|default:"—"|linebreaksbr }}</dd></div>
       <div class="detail-row"><dt>비고</dt><dd>{{ edit_lesson.lesson_notes|default:"—"|linebreaksbr }}</dd></div>
     </dl>
+  </section>
+  {% elif edit_lesson.status == 'completed' %}
+  <section class="form-panel">
+    <dl class="form-panel-grid detail-grid">
+      <div class="detail-row"><dt>날짜</dt><dd>{{ lesson_local_date }}</dd></div>
+      <div class="detail-row"><dt>시간</dt><dd>{{ lesson_start_time }} – {{ lesson_end_time }}</dd></div>
+      <div class="detail-row"><dt>수업 내용</dt><dd>{{ edit_lesson.lesson_content|default:"—"|linebreaksbr }}</dd></div>
+      <div class="detail-row"><dt>비고</dt><dd>{{ edit_lesson.lesson_notes|default:"—"|linebreaksbr }}</dd></div>
+    </dl>
+    <p class="form-submit-row lesson-submit-row">
+      <form method="post" action="{% url 'lesson-uncomplete-web' edit_lesson.pk %}" class="lesson-uncomplete-form">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-secondary">수업 완료 취소</button>
+      </form>
+    </p>
+    <p class="text-muted lesson-mode-hint">완료된 수업은 수정할 수 없습니다. 변경하려면 완료 취소 후 다시 편집하세요.</p>
   </section>
   {% else %}
   <div class="lesson-mode-toolbar">
@@ -32,43 +50,41 @@
 
   <div id="lesson-work-panel" class="lesson-action-panel">
     <form method="post" class="lesson-main-form" id="lesson-main-form"
+          action="{% url 'student-detail' student.pk %}?lesson={{ edit_lesson.pk }}"
           data-lesson-start="{{ edit_lesson.start_datetime.isoformat }}">{% csrf_token %}
       <input type="hidden" name="action" value="lesson_update">
       <input type="hidden" name="lesson_id" value="{{ edit_lesson.pk }}">
-      <div class="form-field form-field--memo">
-        <label for="lesson-content">수업 내용</label>
-        <textarea id="lesson-content" name="lesson_content" rows="5">{{ edit_lesson.lesson_content }}</textarea>
-      </div>
-      <div class="form-field form-field--memo">
-        <label for="lesson-notes">비고</label>
-        <textarea id="lesson-notes" name="lesson_notes" rows="3">{{ edit_lesson.lesson_notes }}</textarea>
-      </div>
-
-      <div class="lesson-phase-toolbar">
-        <div class="segmented segmented--compact" role="group" aria-label="수업 단계">
-          <input type="radio" class="segmented-input" name="lesson-phase" id="lesson-phase-before" value="before"
-                 {% if not lesson_has_started %}checked{% endif %}>
-          <label class="segmented-btn" for="lesson-phase-before">수업 전</label>
-          <input type="radio" class="segmented-input" name="lesson-phase" id="lesson-phase-complete" value="complete"
-                 {% if lesson_has_started %}checked{% endif %}>
-          <label class="segmented-btn" for="lesson-phase-complete">수업 완료</label>
+      <section class="form-panel">
+        <div class="form-panel-grid">
+          <div class="form-field">
+            <label for="lesson-date">날짜</label>
+            <input type="date" id="lesson-date" name="lesson_date" value="{{ lesson_local_date }}" required>
+          </div>
+          <div class="form-field">
+            <label for="lesson-start-time">시작</label>
+            <input type="time" id="lesson-start-time" name="start_time" value="{{ lesson_start_time }}" required>
+          </div>
+          <div class="form-field">
+            <label for="lesson-end-time">종료</label>
+            <input type="time" id="lesson-end-time" name="end_time" value="{{ lesson_end_time }}" required>
+          </div>
         </div>
-      </div>
+        <div class="form-field form-field--memo">
+          <label for="lesson-content">수업 내용</label>
+          <textarea id="lesson-content" name="lesson_content" rows="5">{{ edit_lesson.lesson_content }}</textarea>
+        </div>
+        <div class="form-field form-field--memo">
+          <label for="lesson-notes">비고</label>
+          <textarea id="lesson-notes" name="lesson_notes" rows="3">{{ edit_lesson.lesson_notes }}</textarea>
+        </div>
+      </section>
 
-      <div id="phase-before" class="lesson-phase-panel"{% if lesson_has_started %} hidden{% endif %}>
-        <p class="form-submit-row lesson-submit-row">
-          <button type="submit" class="btn btn-secondary">저장</button>
-        </p>
-        <p class="text-muted lesson-mode-hint">수업 전에 메모·준비 내용을 저장할 수 있습니다.</p>
-      </div>
-
-      <div id="phase-complete" class="lesson-phase-panel"{% if not lesson_has_started %} hidden{% endif %}>
-        <p class="form-submit-row lesson-submit-row">
-          <button type="submit" class="btn" id="lesson-complete-btn"
-                  formaction="{% url 'lesson-complete-web' edit_lesson.pk %}">수업 완료</button>
-        </p>
-        <p class="text-muted lesson-mode-hint">완료 시 입력한 내용·비고도 함께 저장됩니다.</p>
-      </div>
+      <p class="form-submit-row lesson-submit-row">
+        <button type="submit" class="btn btn-secondary">저장</button>
+        <button type="submit" class="btn" id="lesson-complete-btn"
+                formaction="{% url 'lesson-complete-web' edit_lesson.pk %}">수업 완료</button>
+      </p>
+      <p class="text-muted lesson-mode-hint">수업 완료 시 입력한 일정·내용·비고가 자동으로 저장된 뒤 완료 처리됩니다.</p>
     </form>
   </div>
 
@@ -117,16 +133,20 @@
 
   const lessonContent = document.getElementById('lesson-content');
   const lessonNotes = document.getElementById('lesson-notes');
+  const lessonDate = document.getElementById('lesson-date');
+  const lessonStartTime = document.getElementById('lesson-start-time');
+  const lessonEndTime = document.getElementById('lesson-end-time');
   const cancelReason = document.getElementById('cancel-reason');
   const cancelBy = document.getElementById('cancel-by');
   const cancelMakeup = document.getElementById('cancel-makeup');
   const cancelMakeupDate = document.getElementById('cancel-makeup-date');
-  const phaseBefore = document.getElementById('phase-before');
-  const phaseComplete = document.getElementById('phase-complete');
 
   function clearLessonFields() {
     if (lessonContent) lessonContent.value = '';
     if (lessonNotes) lessonNotes.value = '';
+    if (lessonDate) lessonDate.value = '';
+    if (lessonStartTime) lessonStartTime.value = '';
+    if (lessonEndTime) lessonEndTime.value = '';
   }
 
   function clearCancelFields() {
@@ -142,25 +162,24 @@
     cancelWorkPanel.hidden = isLesson;
   }
 
-  function showPhase(phase) {
-    if (!phaseBefore || !phaseComplete) return;
-    phaseBefore.hidden = phase !== 'before';
-    phaseComplete.hidden = phase !== 'complete';
-  }
-
   const lessonForm = document.getElementById('lesson-main-form');
   const completeBtn = document.getElementById('lesson-complete-btn');
   if (lessonForm && completeBtn) {
     lessonForm.addEventListener('submit', function(ev) {
       if (ev.submitter !== completeBtn) return;
       const start = new Date(lessonForm.dataset.lessonStart);
-      if (Date.now() < start.getTime()) {
+      if (lessonDate && lessonStartTime && lessonDate.value && lessonStartTime.value) {
+        const localStart = new Date(lessonDate.value + 'T' + lessonStartTime.value);
+        if (!isNaN(localStart.getTime())) {
+          if (Date.now() < localStart.getTime()) {
+            ev.preventDefault();
+            alert('아직 수업 전입니다.');
+            return;
+          }
+        }
+      } else if (Date.now() < start.getTime()) {
         ev.preventDefault();
         alert('아직 수업 전입니다.');
-        return;
-      }
-      if (!confirm('이 수업을 완료 처리할까요? 입력한 내용·비고도 함께 저장됩니다.')) {
-        ev.preventDefault();
       }
     });
   }
@@ -177,11 +196,6 @@
     });
   });
 
-  document.querySelectorAll('input[name="lesson-phase"]').forEach(function(radio) {
-    radio.addEventListener('change', function() {
-      if (this.checked) showPhase(this.value);
-    });
-  });
 })();
 </script>
 {% endblock %}

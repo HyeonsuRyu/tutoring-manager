@@ -121,9 +121,10 @@ def test_lesson_detail_page(logged_in_client, student):
     html = res.content.decode()
     assert "lesson-action-lesson" in html
     assert "lesson-action-cancel" in html
-    assert "lesson-phase-before" in html
-    assert "lesson-phase-complete" in html
+    assert 'id="lesson-complete-btn"' in html
+    assert "수업 완료" in html
     assert 'class="btn btn-secondary">저장</button>' in html
+    assert 'name="lesson_date"' in html
     assert "수업 완료" in html
     assert "취소 처리" in html
     assert "student-detail-card" not in html

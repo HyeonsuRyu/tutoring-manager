@@ -125,11 +125,19 @@ class StudentDetailView(OwnerQuerysetMixin, DetailView):
         ctx = super().get_context_data(**kwargs)
         lesson_id = self.request.GET.get("lesson")
         if lesson_id:
+            from zoneinfo import ZoneInfo
+
             from calendar_app.services import lesson_has_started
 
             edit_lesson = get_object_or_404(Lesson, pk=lesson_id, student=self.object)
+            tz = ZoneInfo(self.object.timezone)
+            local_start = edit_lesson.start_datetime.astimezone(tz)
+            local_end = edit_lesson.end_datetime.astimezone(tz)
             ctx["edit_lesson"] = edit_lesson
             ctx["lesson_has_started"] = lesson_has_started(edit_lesson)
+            ctx["lesson_local_date"] = local_start.date().isoformat()
+            ctx["lesson_start_time"] = local_start.strftime("%H:%M")
+            ctx["lesson_end_time"] = local_end.strftime("%H:%M")
             return ctx
 
         ctx["timezone_label"] = timezone_label_ko(self.object.timezone)
@@ -184,13 +192,29 @@ class StudentDetailView(OwnerQuerysetMixin, DetailView):
         return redirect("student-detail", pk=self.object.pk)
 
     def _post_lesson(self, request, lesson_id: int):
+        from datetime import date, time
+
+        from django.contrib import messages
+
         from calendar_app.models import Lesson
+        from calendar_app.services import save_lesson_detail
 
         lesson = get_object_or_404(Lesson, pk=lesson_id, student=self.object)
         if request.POST.get("action") == "lesson_update":
-            lesson.lesson_content = request.POST.get("lesson_content", "")
-            lesson.lesson_notes = request.POST.get("lesson_notes", "")
-            lesson.save(update_fields=["lesson_content", "lesson_notes"])
+            if lesson.status == Lesson.Status.COMPLETED:
+                messages.error(request, "완료된 수업은 수정할 수 없습니다. 완료 취소 후 다시 시도하세요.")
+                return HttpResponseRedirect(self._lesson_detail_url(lesson.pk))
+            try:
+                save_lesson_detail(
+                    lesson,
+                    lesson_content=request.POST.get("lesson_content", ""),
+                    lesson_notes=request.POST.get("lesson_notes", ""),
+                    on_date=date.fromisoformat(request.POST["lesson_date"]),
+                    start_time=time.fromisoformat(request.POST["start_time"]),
+                    end_time=time.fromisoformat(request.POST["end_time"]),
+                )
+            except (ValueError, KeyError) as exc:
+                messages.error(request, str(exc))
         return HttpResponseRedirect(self._lesson_detail_url(lesson.pk))
 
 

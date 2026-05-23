@@ -419,6 +419,76 @@ def cancel_lesson(
     return lesson
 
 
+def _apply_lesson_datetimes(lesson: Lesson, start_datetime: datetime, end_datetime: datetime) -> Lesson:
+    student = lesson.student
+    old_date = lesson.date
+    new_date = start_datetime.astimezone(ZoneInfo(student.timezone)).date()
+    lesson.start_datetime = start_datetime
+    lesson.end_datetime = end_datetime
+    lesson.date = new_date
+    lesson.save(update_fields=["start_datetime", "end_datetime", "date"])
+    if lesson.schedule_slot_id and old_date != new_date:
+        dismiss_proposal(student.owner, lesson.schedule_slot_id, old_date)
+    resequence_lesson_numbers(student)
+    lesson.refresh_from_db()
+    return lesson
+
+
+@transaction.atomic
+def update_lesson_schedule(
+    lesson: Lesson,
+    *,
+    on_date: date,
+    start_time: time,
+    end_time: time,
+) -> Lesson:
+    if lesson.status == Lesson.Status.CANCELLED:
+        raise ValueError("취소된 수업은 일정을 변경할 수 없습니다.")
+    student = lesson.student
+    tz = ZoneInfo(student.timezone)
+    start_local = datetime.combine(on_date, start_time)
+    end_local = datetime.combine(on_date, end_time)
+    if end_local <= start_local:
+        raise ValueError("종료 시간은 시작 시간보다 늦어야 합니다.")
+    start_dt = start_local.replace(tzinfo=tz).astimezone(dt_timezone.utc)
+    end_dt = end_local.replace(tzinfo=tz).astimezone(dt_timezone.utc)
+    return _apply_lesson_datetimes(lesson, start_dt, end_dt)
+
+
+@transaction.atomic
+def save_lesson_detail(
+    lesson: Lesson,
+    *,
+    lesson_content: str,
+    lesson_notes: str,
+    on_date: date,
+    start_time: time,
+    end_time: time,
+) -> Lesson:
+    if lesson.status == Lesson.Status.COMPLETED:
+        raise ValueError("완료된 수업은 수정할 수 없습니다.")
+    if lesson.status == Lesson.Status.CANCELLED:
+        raise ValueError("취소된 수업은 수정할 수 없습니다.")
+    update_lesson_content(lesson, lesson_content=lesson_content, lesson_notes=lesson_notes)
+    update_lesson_schedule(lesson, on_date=on_date, start_time=start_time, end_time=end_time)
+    return lesson
+
+
+@transaction.atomic
+def uncomplete_lesson(lesson: Lesson) -> Lesson:
+    if lesson.status != Lesson.Status.COMPLETED:
+        raise ValueError("완료된 수업만 완료 취소할 수 있습니다.")
+    if lesson.completion_counted:
+        student = lesson.student
+        student.lessons_completed = max(0, student.lessons_completed - 1)
+        student.save(update_fields=["lessons_completed", "updated_at"])
+        lesson.completion_counted = False
+    lesson.status = Lesson.Status.SCHEDULED
+    lesson.completed_at = None
+    lesson.save(update_fields=["status", "completed_at", "completion_counted"])
+    return lesson
+
+
 @transaction.atomic
 def reschedule_lesson(
     lesson: Lesson,
@@ -428,23 +498,10 @@ def reschedule_lesson(
 ) -> Lesson:
     if lesson.status == Lesson.Status.COMPLETED:
         raise ValueError("Completed lessons cannot be rescheduled")
-    student = lesson.student
-    old_date = lesson.date
     if end_datetime is None:
         duration = lesson.end_datetime - lesson.start_datetime
         end_datetime = start_datetime + duration
-    new_date = start_datetime.astimezone(ZoneInfo(student.timezone)).date()
-    lesson.start_datetime = start_datetime
-    lesson.end_datetime = end_datetime
-    lesson.date = new_date
-    lesson.save(
-        update_fields=["start_datetime", "end_datetime", "date"]
-    )
-    if lesson.schedule_slot_id and old_date != new_date:
-        dismiss_proposal(student.owner, lesson.schedule_slot_id, old_date)
-    resequence_lesson_numbers(student)
-    lesson.refresh_from_db()
-    return lesson
+    return _apply_lesson_datetimes(lesson, start_datetime, end_datetime)
 
 
 def resolve_student_for_owner(

@@ -73,6 +73,53 @@ def test_complete_lesson_before_start_rejected(logged_in_client, student):
 
 
 @pytest.mark.integration
+def test_lesson_detail_update_schedule(logged_in_client, student):
+    lesson = LessonFactory(
+        student=student,
+        status=Lesson.Status.SCHEDULED,
+        date=__import__("datetime").date(2026, 3, 18),
+        start_datetime=datetime(2026, 3, 18, 10, 0, tzinfo=dt_timezone.utc),
+        end_datetime=datetime(2026, 3, 18, 11, 0, tzinfo=dt_timezone.utc),
+    )
+    res = logged_in_client.post(
+        f"/students/{student.pk}/?lesson={lesson.pk}",
+        {
+            "action": "lesson_update",
+            "lesson_id": str(lesson.pk),
+            "lesson_date": "2026-03-19",
+            "start_time": "14:00",
+            "end_time": "15:30",
+            "lesson_content": "복습",
+            "lesson_notes": "",
+        },
+    )
+    assert res.status_code == 302
+    lesson.refresh_from_db()
+    assert lesson.date.isoformat() == "2026-03-19"
+    assert lesson.lesson_content == "복습"
+
+
+@pytest.mark.integration
+def test_uncomplete_lesson_from_detail(logged_in_client, student):
+    lesson = LessonFactory(
+        student=student,
+        status=Lesson.Status.COMPLETED,
+        completion_counted=True,
+        start_datetime=datetime(2026, 3, 18, 10, 0, tzinfo=dt_timezone.utc),
+        end_datetime=datetime(2026, 3, 18, 11, 0, tzinfo=dt_timezone.utc),
+    )
+    student.lessons_completed = 1
+    student.save(update_fields=["lessons_completed", "updated_at"])
+    res = logged_in_client.post(f"/lessons/{lesson.pk}/uncomplete/", {})
+    assert res.status_code == 302
+    lesson.refresh_from_db()
+    student.refresh_from_db()
+    assert lesson.status == Lesson.Status.SCHEDULED
+    assert student.lessons_completed == 0
+    assert lesson.completed_at is None
+
+
+@pytest.mark.integration
 def test_cancel_lesson_from_student_detail(logged_in_client, student):
     lesson = LessonFactory(student=student, status=Lesson.Status.SCHEDULED)
     res = logged_in_client.post(

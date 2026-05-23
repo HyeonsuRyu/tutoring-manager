@@ -19,6 +19,8 @@ from calendar_app.services import (
     dismiss_proposal,
     get_calendar_events,
     resolve_student_for_owner,
+    save_lesson_detail,
+    uncomplete_lesson,
     update_lesson_content,
 )
 from students.models import Student
@@ -56,14 +58,44 @@ class CalendarEventsJsonView(LoginRequiredMixin, View):
         return response
 
 
+def _lesson_detail_redirect(lesson: Lesson):
+    return redirect(
+        reverse("student-detail", kwargs={"pk": lesson.student_id}) + f"?lesson={lesson.pk}"
+    )
+
+
+def _parse_lesson_schedule_post(request, lesson: Lesson) -> tuple[date, time, time]:
+    if request.POST.get("lesson_date") and request.POST.get("start_time") and request.POST.get("end_time"):
+        return (
+            date.fromisoformat(request.POST["lesson_date"]),
+            time.fromisoformat(request.POST["start_time"]),
+            time.fromisoformat(request.POST["end_time"]),
+        )
+    from zoneinfo import ZoneInfo
+
+    tz = ZoneInfo(lesson.student.timezone)
+    local_start = lesson.start_datetime.astimezone(tz)
+    local_end = lesson.end_datetime.astimezone(tz)
+    return local_start.date(), local_start.time(), local_end.time()
+
+
 class LessonCompleteView(LoginRequiredMixin, View):
     def post(self, request, pk):
         lesson = get_object_or_404(Lesson, pk=pk, student__owner=request.user)
-        update_lesson_content(
-            lesson,
-            lesson_content=request.POST.get("lesson_content", ""),
-            lesson_notes=request.POST.get("lesson_notes", ""),
-        )
+        try:
+            on_date, start_time, end_time = _parse_lesson_schedule_post(request, lesson)
+            save_lesson_detail(
+                lesson,
+                lesson_content=request.POST.get("lesson_content", ""),
+                lesson_notes=request.POST.get("lesson_notes", ""),
+                on_date=on_date,
+                start_time=start_time,
+                end_time=end_time,
+            )
+            lesson.refresh_from_db()
+        except ValueError as exc:
+            messages.error(request, str(exc))
+            return _lesson_detail_redirect(lesson)
         try:
             complete_lesson(lesson)
         except LessonNotStartedError:
@@ -76,10 +108,17 @@ class LessonCompleteView(LoginRequiredMixin, View):
             )
         if request.headers.get("X-Requested-With") == "XMLHttpRequest":
             return JsonResponse({"ok": True, "lessons_completed": lesson.student.lessons_completed})
-        return redirect(
-            reverse("student-detail", kwargs={"pk": lesson.student_id})
-            + f"?lesson={lesson.pk}"
-        )
+        return _lesson_detail_redirect(lesson)
+
+
+class LessonUncompleteView(LoginRequiredMixin, View):
+    def post(self, request, pk):
+        lesson = get_object_or_404(Lesson, pk=pk, student__owner=request.user)
+        try:
+            uncomplete_lesson(lesson)
+        except ValueError as exc:
+            messages.error(request, str(exc))
+        return _lesson_detail_redirect(lesson)
 
 
 class LessonApproveView(LoginRequiredMixin, View):
