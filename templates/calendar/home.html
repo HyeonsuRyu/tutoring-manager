@@ -35,31 +35,31 @@
   .fc .fc-col-header .fc-day-sat .fc-col-header-cell-cushion,
   .fc .fc-daygrid-day.fc-day-sat .fc-daygrid-day-number,
   .fc .fc-timegrid-col.fc-day-sat .fc-col-header-cell-cushion { color: #2563eb; font-weight: 600; }
-  /* 주차 — 월요일 칸: 주차(왼쪽)·날짜(오른쪽) 한 줄 */
-  .fc .fc-day-mon .fc-daygrid-day-top.fc-day-top-with-week {
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    justify-content: space-between;
-    gap: .25rem;
-    width: 100%;
+  /* 날짜 숫자 행 — 모든 요일 동일 높이 (월요일 주차는 겹쳐 표시) */
+  .fc .fc-daygrid-day-top {
+    position: relative;
+    min-height: 1.375rem;
     padding: 2px 4px;
+    box-sizing: border-box;
   }
   .fc .fc-day-mon .fc-daygrid-day-top.fc-day-top-with-week .fc-daygrid-day-number {
-    float: none;
-    margin-left: auto;
+    float: right;
   }
   .fc .fc-week-number-monday {
-    display: inline-block;
-    flex: 0 0 auto;
+    position: absolute;
+    left: 4px;
+    top: 50%;
+    transform: translateY(-50%);
     color: #4b5563;
     font-size: .7rem;
     font-weight: 600;
-    line-height: 1.3;
+    line-height: 1;
     text-align: left;
     background: color-mix(in srgb, #e8eaed 80%, #111827 20%);
     padding: 1px 5px;
     border-radius: 4px;
+    pointer-events: none;
+    z-index: 1;
   }
   .fc-daygrid-day-events { position: relative; min-height: 1.25rem; }
   .cal-add-slot {
