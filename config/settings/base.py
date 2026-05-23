@@ -120,6 +120,9 @@ ACCOUNT_SESSION_REMEMBER = True
 ACCOUNT_UNIQUE_EMAIL = True
 ACCOUNT_MAX_EMAIL_ADDRESSES = 1
 ACCOUNT_EMAIL_CONFIRMATION_HMAC = True
+ACCOUNT_FORMS = {
+    "change_password": "accounts.forms.ChangePasswordForm",
+}
 
 SOCIALACCOUNT_ADAPTER = "allauth.socialaccount.adapter.DefaultSocialAccountAdapter"
 SOCIALACCOUNT_QUERY_EMAIL = True
