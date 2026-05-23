@@ -22,7 +22,8 @@
       </div>
       <nav class="nav-section" aria-label="메뉴">
         <a href="{% url 'home' %}" class="nav-link{% if request.resolver_match.url_name == 'home' %} is-active{% endif %}">달력</a>
-        <a href="{% url 'student-list' %}" class="nav-link{% if request.path|slice:':10' == '/students/' %} is-active{% endif %}">학생</a>
+        <a href="{% url 'student-list' %}" class="nav-link{% if request.path|slice:':10' == '/students/' and '/progress' not in request.path %} is-active{% endif %}">학생</a>
+        <a href="{% url 'progress-hub' %}" class="nav-link{% if '/students/progress' in request.path %} is-active{% endif %}">진도차트</a>
         <a href="{% url 'weekly-report' %}" class="nav-link{% if request.resolver_match.url_name == 'weekly-report' %} is-active{% endif %}">주간 수업 현황</a>
         <a href="{% url 'subject-list' %}" class="nav-link{% if request.resolver_match.url_name == 'subject-list' %} is-active{% endif %}">과목 설정</a>
       </nav>

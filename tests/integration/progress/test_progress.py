@@ -42,7 +42,7 @@ def test_progress_lists_completed_lesson_columns(logged_in_client, student):
         lesson_content="완료 내용",
         lesson_notes="비고",
     )
-    res = logged_in_client.get(f"/students/{student.pk}/progress/")
+    res = logged_in_client.get(f"/students/progress/{student.pk}/")
     body = res.content.decode()
     assert res.status_code == 200
     assert "완료 내용" in body

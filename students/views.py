@@ -7,6 +7,7 @@ from django.views import View
 from django.views.generic import CreateView, DeleteView, DetailView, ListView, UpdateView
 
 from core.contact_mask import mask_contact
+from core.timezone_suggest import list_common_timezones
 from students.forms import GoalHistoryEntryForm, ScheduleSlotFormSet, StudentDetailForm, StudentForm, SubjectForm
 from students.models import GoalHistoryEntry, Student, StudentDetail, Subject
 
@@ -106,25 +107,45 @@ class StudentDetailView(OwnerQuerysetMixin, DetailView):
     model = Student
     template_name = "students/detail.html"
 
+    def get_queryset(self):
+        return super().get_queryset().prefetch_related("subjects", "schedule_slots")
+
+    def get_template_names(self):
+        if self.request.GET.get("lesson"):
+            return ["students/lesson_detail.html"]
+        return ["students/detail.html"]
+
+    def _lesson_detail_url(self, lesson_pk: int) -> str:
+        return reverse("student-detail", kwargs={"pk": self.object.pk}) + f"?lesson={lesson_pk}"
+
     def get_context_data(self, **kwargs):
         from calendar_app.models import Lesson
+        from core.timezone_suggest import timezone_label_ko
 
         ctx = super().get_context_data(**kwargs)
+        lesson_id = self.request.GET.get("lesson")
+        if lesson_id:
+            ctx["edit_lesson"] = get_object_or_404(
+                Lesson, pk=lesson_id, student=self.object
+            )
+            return ctx
+
+        ctx["timezone_label"] = timezone_label_ko(self.object.timezone)
+        ctx["hourly_rate_display"] = f"{int(self.object.hourly_rate):,}"
         detail, _ = StudentDetail.objects.get_or_create(student=self.object)
         ctx["detail"] = detail
         ctx["history"] = detail.history_entries.all()
         ctx["memo_form"] = StudentDetailForm(instance=detail)
         ctx["history_form"] = GoalHistoryEntryForm()
         ctx["entry_type_choices"] = GoalHistoryEntry.EntryType.choices
-        lesson_id = self.request.GET.get("lesson")
-        if lesson_id:
-            ctx["edit_lesson"] = get_object_or_404(
-                Lesson, pk=lesson_id, student=self.object
-            )
         return ctx
 
     def post(self, request, *args, **kwargs):
         self.object = self.get_object()
+        lesson_id = request.GET.get("lesson")
+        if lesson_id:
+            return self._post_lesson(request, int(lesson_id))
+
         detail, _ = StudentDetail.objects.get_or_create(student=self.object)
         action = request.POST.get("action", "memo")
 
@@ -158,17 +179,17 @@ class StudentDetailView(OwnerQuerysetMixin, DetailView):
             entry.delete()
             return redirect("student-detail", pk=self.object.pk)
 
-        if action == "lesson_update":
-            from calendar_app.models import Lesson
+        return redirect("student-detail", pk=self.object.pk)
 
-            lesson = get_object_or_404(Lesson, pk=int(request.POST["lesson_id"]), student=self.object)
+    def _post_lesson(self, request, lesson_id: int):
+        from calendar_app.models import Lesson
+
+        lesson = get_object_or_404(Lesson, pk=lesson_id, student=self.object)
+        if request.POST.get("action") == "lesson_update":
             lesson.lesson_content = request.POST.get("lesson_content", "")
             lesson.lesson_notes = request.POST.get("lesson_notes", "")
             lesson.save(update_fields=["lesson_content", "lesson_notes"])
-            url = reverse("student-detail", kwargs={"pk": self.object.pk}) + f"?lesson={lesson.pk}"
-            return HttpResponseRedirect(url)
-
-        return redirect("student-detail", pk=self.object.pk)
+        return HttpResponseRedirect(self._lesson_detail_url(lesson.pk))
 
 
 class TimezoneSuggestView(LoginRequiredMixin, View):
@@ -203,6 +224,15 @@ class SubjectListView(LoginRequiredMixin, ListView):
             if form.is_valid():
                 Subject.objects.create(owner=request.user, name=form.cleaned_data["name"])
         return self.get(request, *args, **kwargs)
+
+
+class ProgressHubView(LoginRequiredMixin, ListView):
+    model = Student
+    template_name = "students/progress_hub.html"
+    context_object_name = "students"
+
+    def get_queryset(self):
+        return Student.objects.filter(owner=self.request.user).order_by("name")
 
 
 class ProgressChartView(OwnerQuerysetMixin, DetailView):

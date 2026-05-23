@@ -1,4 +1,0 @@
-<nav class="tabs" aria-label="{{ student.name }} 메뉴">
-  <a href="{% url 'student-detail' student.pk %}" class="tab{% if active_tab == 'detail' %} is-active{% endif %}">상세</a>
-  <a href="{% url 'student-progress' student.pk %}" class="tab{% if active_tab == 'progress' %} is-active{% endif %}">진도차트</a>
-</nav>

@@ -192,6 +192,15 @@ class GoalHistoryEntryForm(forms.ModelForm):
     class Meta:
         model = GoalHistoryEntry
         fields = ["entry_date", "entry_type", "title", "body"]
+        labels = {
+            "entry_date": "날짜",
+            "entry_type": "유형",
+            "title": "제목",
+            "body": "내용",
+        }
+        widgets = {
+            "body": forms.Textarea(attrs={"rows": 3}),
+        }
 
 
 class SubjectForm(forms.ModelForm):

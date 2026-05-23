@@ -100,19 +100,50 @@ def test_student_detail_memo_and_history(logged_in_client, student):
 
 @pytest.mark.integration
 def test_student_progress_page(logged_in_client, student):
-    res = logged_in_client.get(f"/students/{student.pk}/progress/")
+    res = logged_in_client.get(f"/students/progress/{student.pk}/")
     assert res.status_code == 200
     html = res.content.decode()
-    assert "진도차트" in html
-    assert 'class="tab is-active"' in html or "tab is-active" in html
+    assert "진도차트" not in html or student.name in html
+    assert 'class="tabs"' not in html
+    assert "다른 학생" in html
 
 
-def test_student_detail_has_progress_tab(logged_in_client, student):
+def test_student_detail_no_tabs(logged_in_client, student):
     res = logged_in_client.get(f"/students/{student.pk}/")
     assert res.status_code == 200
     html = res.content.decode()
-    assert "student-progress" in html or f"/students/{student.pk}/progress/" in html
-    assert "진도차트" in html
+    assert 'class="tabs"' not in html
+    assert "student-detail-card" in html
+
+
+def test_lesson_detail_page(logged_in_client, student):
+    from tests.factories import LessonFactory
+
+    lesson = LessonFactory(student=student, status="scheduled")
+    res = logged_in_client.get(f"/students/{student.pk}/?lesson={lesson.pk}")
+    assert res.status_code == 200
+    html = res.content.decode()
+    assert "lesson-mode-lesson" in html
+    assert "내용·비고 저장" in html
+    assert "수업 완료" in html
+    assert "student-detail-card" not in html
+    assert f'href="/students/{student.pk}/"' in html.replace(" ", "")
+    assert "기본 정보" not in html
+
+
+@pytest.mark.integration
+def test_student_detail_layout_panels(logged_in_client, student):
+    Subject.objects.create(owner=student.owner, name="수학")
+    student.subjects.add(Subject.objects.get(owner=student.owner, name="수학"))
+    res = logged_in_client.get(f"/students/{student.pk}/")
+    assert res.status_code == 200
+    html = res.content.decode()
+    assert "student-detail-card" in html
+    assert "기본 정보" in html
+    assert "학부모" in html
+    assert "수업 설정" in html
+    assert "첫 수업 일자" in html
+    assert "subject-tag" in html
 
 
 @pytest.mark.integration

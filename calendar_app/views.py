@@ -38,7 +38,10 @@ class LessonCompleteView(LoginRequiredMixin, View):
         complete_lesson(lesson)
         if request.headers.get("X-Requested-With") == "XMLHttpRequest":
             return JsonResponse({"ok": True, "lessons_completed": lesson.student.lessons_completed})
-        return redirect(reverse("student-detail", kwargs={"pk": lesson.student_id}))
+        return redirect(
+            reverse("student-detail", kwargs={"pk": lesson.student_id})
+            + f"?lesson={lesson.pk}"
+        )
 
 
 class LessonApproveView(LoginRequiredMixin, View):
@@ -71,4 +74,7 @@ class LessonCancelView(LoginRequiredMixin, View):
         )
         if request.headers.get("X-Requested-With") == "XMLHttpRequest":
             return JsonResponse({"ok": True})
-        return redirect(reverse("student-detail", kwargs={"pk": lesson.student_id}))
+        return redirect(
+            reverse("student-detail", kwargs={"pk": lesson.student_id})
+            + f"?lesson={lesson.pk}"
+        )
