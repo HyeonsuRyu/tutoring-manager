@@ -29,8 +29,7 @@
       </nav>
       <nav class="nav-section" aria-label="계정">
         <span class="nav-section-label">계정</span>
-        <a href="{% url 'account_email' %}" class="nav-link{% if request.resolver_match.url_name == 'account_email' %} is-active{% endif %}">이메일·비밀번호</a>
-        <a href="{% url 'totp-setup' %}" class="nav-link{% if request.resolver_match.url_name == 'totp-setup' or request.resolver_match.url_name == 'totp-disable' %} is-active{% endif %}">2단계 인증</a>
+        <a href="{% url 'account_settings' %}" class="nav-link{% if request.resolver_match.url_name == 'account_settings' or request.resolver_match.url_name == 'account_email' or request.resolver_match.url_name == 'account_change_password' or request.resolver_match.url_name == 'totp-setup' or request.resolver_match.url_name == 'totp-disable' %} is-active{% endif %}">계정 관리</a>
       </nav>
       <div class="sidebar-footer">
         <div class="user-chip">{{ user.email }}</div>

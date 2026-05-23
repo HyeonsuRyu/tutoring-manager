@@ -1,9 +1,10 @@
 from django.urls import include, path, re_path
+from django.views.generic import RedirectView
 
 from allauth.account.views import confirm_email
 
 from accounts import views_2fa
-from accounts.views_email import SensitiveEmailView
+from accounts.views_account import AccountSettingsView
 from accounts.views_password import SensitivePasswordChangeView
 
 urlpatterns = [
@@ -13,9 +14,18 @@ urlpatterns = [
         confirm_email,
         name="account_confirm_email",
     ),
-    path("email/", SensitiveEmailView.as_view(), name="account_email"),
+    path("settings/", AccountSettingsView.as_view(), name="account_settings"),
+    path(
+        "email/",
+        RedirectView.as_view(pattern_name="account_settings", permanent=False),
+        name="account_email",
+    ),
     path("password/change/", SensitivePasswordChangeView.as_view(), name="account_change_password"),
-    path("2fa/setup/", views_2fa.TotpSetupView.as_view(), name="totp-setup"),
+    path(
+        "2fa/setup/",
+        RedirectView.as_view(pattern_name="account_settings", permanent=False),
+        name="totp-setup",
+    ),
     path("2fa/disable/", views_2fa.TotpDisableView.as_view(), name="totp-disable"),
     path("naver/", include("accounts.providers.naver.urls")),
 ]

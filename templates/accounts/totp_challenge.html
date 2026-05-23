@@ -4,8 +4,9 @@
 <div class="card auth-card">
   <h1>2단계 인증</h1>
   <p>민감한 작업을 위해 인증 앱의 6자리 코드 또는 백업 코드를 입력하세요.</p>
-  <form method="post">{% csrf_token %}
-    <input name="otp_token" maxlength="32" required autofocus>
+  <form method="post" action="{{ request.path }}">{% csrf_token %}
+    <label for="otp_token">인증 코드</label>
+    <input id="otp_token" name="otp_token" maxlength="32" inputmode="numeric" autocomplete="one-time-code" required autofocus>
     <button type="submit" class="btn">확인</button>
   </form>
 </div>

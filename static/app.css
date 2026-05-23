@@ -265,6 +265,29 @@ body.app-guest .guest-main .messages li {
   box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.2) !important;
 }
 
+.account-settings {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  max-width: 36rem;
+}
+
+.account-settings-section h2 {
+  margin: 0 0 0.75rem;
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.account-settings-activate-2fa label,
+.account-settings-disable-2fa {
+  margin-top: 0.75rem;
+}
+
+.account-settings-activate-2fa input {
+  max-width: 10rem;
+  margin-top: 0.35rem;
+}
+
 .card h2 {
   margin: 0 0 0.75rem;
   font-size: 1.05rem;

@@ -23,7 +23,7 @@ uv run python manage.py check
 
 - **allauth**: 이메일 로그인·회원가입·이메일 인증(로컬은 콘솔 메일)
 - **소셜**: Google / GitHub / Naver — `GOOGLE_*`, `GITHUB_*`, `NAVER_*` 환경 변수
-- **2FA**: `/accounts/2fa/setup/` — TOTP + 백업 코드
+- **계정 관리**: `/accounts/settings/` — 이메일, 비밀번호 변경 링크, 2단계 인증
 - **axes**: 로그인 실패 잠금 (테스트 설정에서는 비활성)
 - **비밀번호**: Argon2
 
