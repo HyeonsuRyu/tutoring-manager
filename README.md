@@ -2,7 +2,7 @@
 
 과외 학생·수업 일정·진도·주간 현황 관리. 명세는 [docs/](docs/) 참고.
 
-**범위 외(미구현)**: 엑셀보내기 (진도차트·주간 현황)
+**진도차트 엑셀**: `.xls` **가져오기** 구현 ([docs/progress-import.md](docs/progress-import.md)). **보내기**는 미구현.
 
 ## 개발 환경 (uv)
 
@@ -63,3 +63,4 @@ DRF JWT: `/api/v1/` — [docs/api.md](docs/api.md)
 | [infrastructure.md](docs/infrastructure.md) | Docker·DOMAIN |
 | [auth.md](docs/auth.md) | 인증·2FA |
 | [students.md](docs/students.md) 등 | 도메인 상세 |
+| [progress-import.md](docs/progress-import.md) | 진도차트 `.xls` 가져오기 |

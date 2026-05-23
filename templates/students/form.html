@@ -6,6 +6,12 @@
 </header>
 {% endblock %}
 {% block content %}
+{% if import_prefill_active %}
+<div class="notice notice-info import-prefill-notice" role="status">
+  <p>진도차트 엑셀에서 읽은 정보로 아래 필드를 채웠습니다: {{ import_prefill_labels|join:", " }}.</p>
+  <p class="field-hint">나이는 한국식 세는 나이 기준으로 출생 연도·학년을 추정했습니다. 저장 전에 값을 확인해 주세요.</p>
+</div>
+{% endif %}
 <div class="card student-form-card">
   <form method="post" id="student-form">{% csrf_token %}
 

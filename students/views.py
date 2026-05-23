@@ -9,7 +9,9 @@ from django.views.generic import CreateView, DeleteView, DetailView, ListView, U
 from core.contact_mask import mask_contact
 from core.timezone_suggest import list_common_timezones
 from students.forms import GoalHistoryEntryForm, ScheduleSlotFormSet, StudentDetailForm, StudentForm, SubjectForm
+from students.import_prefill import build_student_prefill
 from students.models import GoalHistoryEntry, Student, StudentDetail, Subject
+from students.views_progress_import import SESSION_KEY as PROGRESS_IMPORT_SESSION_KEY
 
 
 class OwnerQuerysetMixin(LoginRequiredMixin):
@@ -89,12 +91,44 @@ class StudentFormMixin(OwnerQuerysetMixin):
 class StudentCreateView(StudentFormMixin, CreateView):
     success_url = reverse_lazy("student-list")
 
+    def _progress_import_prefill(self) -> dict | None:
+        if self.request.GET.get("from_progress_import") != "1":
+            return None
+        if self.request.method == "POST":
+            return None
+        draft = self.request.session.get(PROGRESS_IMPORT_SESSION_KEY)
+        if not draft:
+            return None
+        prefill = build_student_prefill(draft.get("meta") or {}, self.request.user)
+        if not prefill.get("labels"):
+            return None
+        return prefill
+
+    def get_form(self, form_class=None):
+        form = super().get_form(form_class)
+        prefill = self._progress_import_prefill()
+        if prefill:
+            for key, value in prefill["student_fields"].items():
+                form.fields[key].initial = value
+            if prefill["subject_ids"]:
+                form.fields["subjects"].initial = prefill["subject_ids"]
+        return form
+
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
         if self.request.POST:
             ctx["slot_formset"] = ScheduleSlotFormSet(self.request.POST)
         else:
             ctx["slot_formset"] = ScheduleSlotFormSet()
+        prefill = self._progress_import_prefill()
+        if prefill:
+            ctx["import_prefill_active"] = True
+            ctx["import_prefill_labels"] = prefill["labels"]
+            if prefill.get("detail_memo"):
+                ctx["detail_form"] = StudentDetailForm(
+                    initial={"long_memo": prefill["detail_memo"]},
+                    prefix="detail",
+                )
         return ctx
 
 

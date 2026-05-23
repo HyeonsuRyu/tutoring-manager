@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}가져오기 검토{% endblock %}
+{% block page_header %}
+<header class="page-header">
+  <div>
+    <h1>가져오기 검토</h1>
+    <p class="text-muted page-header-sub">수업을 확인·수정한 뒤 학생을 선택하고, 카드마다 확인 버튼으로 저장하세요.</p>
+  </div>
+  <div class="page-actions">
+    <a href="{% url 'progress-import' %}" class="btn btn-secondary">다시 업로드</a>
+    <a href="{% url 'progress-hub' %}" class="btn btn-secondary">진도차트로</a>
+  </div>
+</header>
+{% endblock %}
+{% block content %}
+<div class="card progress-import-meta">
+  <h2>엑셀 정보</h2>
+  <dl class="detail-grid progress-import-meta-grid">
+    <div class="detail-row"><dt>학생 이름</dt><dd id="meta-student-name">{{ draft.meta.student_name|default:"—" }}</dd></div>
+    <div class="detail-row"><dt>나이</dt><dd id="meta-age">{% if draft.meta.age %}{{ draft.meta.age }}세{% else %}—{% endif %}</dd></div>
+    <div class="detail-row"><dt>교사</dt><dd>{{ draft.meta.teacher_name|default:"—" }}</dd></div>
+    <div class="detail-row"><dt>과목</dt><dd>{{ draft.meta.subject|default:"—" }}</dd></div>
+  </dl>
+</div>
+
+<div class="card progress-import-student">
+  <h2>적용할 학생</h2>
+  <div class="progress-import-student-row">
+    <label for="student_id">학생 선택</label>
+    <select id="student_id" name="student_id" required>
+      <option value="">— 선택 —</option>
+      {% for s in students %}
+      <option value="{{ s.pk }}"{% if s.name == suggested_name %} selected{% endif %}>{{ s.name }} ({{ s.grade }})</option>
+      {% endfor %}
+    </select>
+    <a href="{% url 'student-create' %}?from_progress_import=1" class="btn btn-secondary" target="_blank" rel="noopener">학생 추가</a>
+  </div>
+  <p class="text-muted">엑셀의 학생 이름과 일치하는 항목이 있으면 자동 선택됩니다. 없으면 학생을 추가한 뒤 목록을 새로고침하세요.</p>
+</div>
+
+<div class="progress-import-toolbar">
+  <p class="text-muted">회차(B열)만 있고 날짜·요일·시간·내용이 없는 행은 표시하지 않습니다. 형식이 맞지 않은 항목은 비워 두었으니 입력 후 확인해 주세요. (비고 제외)</p>
+  <button type="button" class="btn btn-secondary" id="btn-add-lesson-end">수업 카드 추가</button>
+</div>
+
+<div id="import-lesson-empty" class="card text-muted" hidden>
+  <p>대기 중인 수업이 없습니다. 진도차트에서 확인하세요.</p>
+</div>
+
+<div id="import-lesson-list" class="import-lesson-list" aria-live="polite"></div>
+
+<p class="progress-import-actions">
+  <span id="import-apply-status" class="text-muted" role="status"></span>
+</p>
+
+{{ draft|json_script:"import-draft-data" }}
+<script>
+  window.PROGRESS_IMPORT = {
+    applyUrl: "{% url 'progress-import-apply' %}",
+    csrfToken: "{{ csrf_token }}",
+  };
+</script>
+<script src="{% static 'progress_import.js' %}"></script>
+{% endblock %}

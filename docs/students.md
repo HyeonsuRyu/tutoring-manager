@@ -157,6 +157,7 @@ flowchart LR
 |----------|------|
 | `/students/` | 목록 — 정렬 `?sort=name` \| `grade` |
 | `/students/new/`, `/students/<id>/edit/` | 등록·수정 — Student + ScheduleSlot formset + 과목 |
+| `/students/new/?from_progress_import=1` | 진도차트 가져오기 검토에서 연결 — 엑셀 메타로 폼 자동 채움 ([progress-import.md](./progress-import.md)) |
 | `/students/<id>/` | 상세 — 요약, 메모, 이력 CRUD |
 | `/students/<id>/progress/` | **진도차트** — 회차·날짜·요일·시간·수업 내용·비고 ([progress-chart.md](./progress-chart.md)) |
 | `/settings/subjects/` | 과목 마스터 — 추가·이름 수정·삭제 |
@@ -173,6 +174,19 @@ flowchart LR
 - 목록 필드 전부
 - `ScheduleSlot` — 「슬롯 추가」/삭제, 슬롯당 요일 1개
 - 과목: 기존 `Subject` 다중 선택 + **새 과목명** 입력 시 마스터 생성 후 연결
+
+### 진도차트 가져오기 연동 (등록)
+
+진도차트 엑셀 검토 화면의 **학생 추가**는 `/students/new/?from_progress_import=1`로 연다. 세션 `progress_import_draft`의 `meta`가 있으면:
+
+| 엑셀 메타 | 폼 필드 |
+|-----------|---------|
+| 학생 이름 | `name` |
+| 나이 (한국식) | `birth_year` (= 올해 − 나이 + 1), `grade` 추천 |
+| 과목 | `Subject` 없으면 생성 후 `subjects` 선택 |
+| 교사 이름 | `StudentDetail.long_memo`에 `담당 교사: …` |
+
+저장 전 사용자가 값을 확인·수정한다.
 
 ### 설정 › 과목
 

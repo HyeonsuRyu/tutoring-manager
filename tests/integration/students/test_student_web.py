@@ -6,6 +6,29 @@ from students.models import GoalHistoryEntry, Student, StudentDetail, Subject
 
 
 @pytest.mark.integration
+def test_student_create_prefill_from_progress_import_session(logged_in_client, user):
+    session = logged_in_client.session
+    session["progress_import_draft"] = {
+        "meta": {
+            "age": 17,
+            "student_name": "엑셀학생",
+            "teacher_name": "박선생",
+            "subject": "영어",
+        },
+        "lessons": [],
+    }
+    session.save()
+    res = logged_in_client.get("/students/new/?from_progress_import=1")
+    assert res.status_code == 200
+    html = res.content.decode()
+    assert "import-prefill-notice" in html
+    assert 'value="엑셀학생"' in html or "엑셀학생" in html
+    assert "담당 교사: 박선생" in html
+    subject = Subject.objects.get(owner=user, name="영어")
+    assert f'value="{subject.pk}"' in html or "checked" in html
+
+
+@pytest.mark.integration
 def test_student_create_form_korean_labels(logged_in_client):
     res = logged_in_client.get("/students/new/")
     assert res.status_code == 200
