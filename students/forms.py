@@ -1,7 +1,6 @@
 from datetime import time
 
 from django import forms
-from django.utils import timezone as django_tz
 from django.forms import BaseInlineFormSet, inlineformset_factory
 
 from core.timezone_suggest import timezone_choices_ko
@@ -65,7 +64,6 @@ class StudentForm(forms.ModelForm):
             "student_contact",
             "parent_name",
             "parent_contact",
-            "first_lesson_date",
             "lesson_duration_minutes",
             "lessons_completed",
             "subjects",
@@ -78,13 +76,11 @@ class StudentForm(forms.ModelForm):
             "student_contact": "학생 연락처",
             "parent_name": "학부모 성함",
             "parent_contact": "학부모 연락처",
-            "first_lesson_date": "첫 수업 일자",
             "lesson_duration_minutes": "1회 수업(분)",
             "lessons_completed": "완료 회차",
             "subjects": "과목",
         }
         widgets = {
-            "first_lesson_date": forms.DateInput(attrs={"type": "date"}),
             "subjects": forms.CheckboxSelectMultiple,
             "birth_year": forms.NumberInput(
                 attrs={
@@ -113,10 +109,6 @@ class StudentForm(forms.ModelForm):
             self.fields["hourly_rate"].initial = f"{int(self.instance.hourly_rate):,}"
         else:
             self.fields["hourly_rate"].initial = f"{DEFAULT_HOURLY_RATE:,}"
-        if not self.instance.pk and not self.initial.get("first_lesson_date"):
-            self.fields["first_lesson_date"].initial = django_tz.localdate()
-        self.fields["first_lesson_date"].required = True
-
     def clean_hourly_rate(self):
         raw = str(self.cleaned_data.get("hourly_rate", "")).replace(",", "").replace("원", "").strip()
         if not raw:

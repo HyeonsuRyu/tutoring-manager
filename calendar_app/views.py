@@ -38,7 +38,10 @@ class CalendarEventsJsonView(LoginRequiredMixin, View):
         else:
             range_start = date.fromisoformat(start_s)
             range_end = date.fromisoformat(end_s)
-        return JsonResponse(get_calendar_events(request.user, range_start, range_end))
+        response = JsonResponse(get_calendar_events(request.user, range_start, range_end))
+        response["Cache-Control"] = "no-store, no-cache, must-revalidate"
+        response["Pragma"] = "no-cache"
+        return response
 
 
 class LessonCompleteView(LoginRequiredMixin, View):

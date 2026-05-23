@@ -136,6 +136,15 @@ function patchLesson(id, payload) {
     headers: {'X-CSRFToken': getCookie('csrftoken'), 'Content-Type': 'application/json'},
     credentials: 'same-origin',
     body: JSON.stringify(payload)
+  }).then(function(res) {
+    if (!res.ok) {
+      return res.json().then(function(body) {
+        throw new Error(body.detail || '수업 일정 저장에 실패했습니다.');
+      }, function() {
+        throw new Error('수업 일정 저장에 실패했습니다.');
+      });
+    }
+    return res.json();
   });
 }
 function closeModal() { document.getElementById('event-modal').classList.remove('open'); }
@@ -361,7 +370,7 @@ document.addEventListener('DOMContentLoaded', function() {
     editable: true,
     eventDisplay: 'block',
     events: function(info, success, failure) {
-      fetch('{% url "calendar-events-json" %}?start=' + info.startStr.slice(0,10) + '&end=' + info.endStr.slice(0,10), {credentials: 'same-origin'})
+      fetch('{% url "calendar-events-json" %}?start=' + info.startStr.slice(0,10) + '&end=' + info.endStr.slice(0,10) + '&_=' + Date.now(), {credentials: 'same-origin', cache: 'no-store'})
         .then(r => r.json())
         .then(data => {
           success(data.events.map(e => ({
@@ -412,15 +421,19 @@ document.addEventListener('DOMContentLoaded', function() {
       const e = arg.event.extendedProps;
       if (e.proposed || e.status === 'completed' || e.status === 'cancelled') { arg.revert(); return; }
       const lid = e.id.replace('lesson-', '');
-      patchLesson(lid, {start_datetime: arg.event.start.toISOString(), end_datetime: arg.event.end.toISOString()})
-        .catch(() => arg.revert());
+      const end = arg.event.end || new Date(arg.event.start.getTime() + (e.duration_minutes || 60) * 60000);
+      patchLesson(lid, {start_datetime: arg.event.start.toISOString(), end_datetime: end.toISOString()})
+        .then(function() { calendar.refetchEvents(); })
+        .catch(function(err) { alert(err.message); arg.revert(); });
     },
     eventResize: function(arg) {
       const e = arg.event.extendedProps;
       if (e.status === 'completed' || e.status === 'cancelled') { arg.revert(); return; }
       const lid = e.id.replace('lesson-', '');
-      patchLesson(lid, {start_datetime: arg.event.start.toISOString(), end_datetime: arg.event.end.toISOString()})
-        .catch(() => arg.revert());
+      const end = arg.event.end || new Date(arg.event.start.getTime() + (e.duration_minutes || 60) * 60000);
+      patchLesson(lid, {start_datetime: arg.event.start.toISOString(), end_datetime: end.toISOString()})
+        .then(function() { calendar.refetchEvents(); })
+        .catch(function(err) { alert(err.message); arg.revert(); });
     },
   });
   calendar.render();

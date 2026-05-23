@@ -33,11 +33,6 @@ class Student(models.Model):
     hourly_rate = models.DecimalField(max_digits=12, decimal_places=0, default=10000)
     lesson_duration_minutes = models.PositiveSmallIntegerField(default=60)
     lessons_completed = models.PositiveIntegerField(default=0)
-    first_lesson_date = models.DateField(
-        null=True,
-        blank=True,
-        help_text="이 날짜 이전에는 달력에 정규 수업 제안·표시가 나오지 않습니다.",
-    )
     subjects = models.ManyToManyField(Subject, blank=True, related_name="students")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

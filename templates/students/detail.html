@@ -36,7 +36,6 @@
     <section class="form-panel">
       <h3 class="form-panel-title">수업 설정</h3>
       <dl class="form-panel-grid detail-grid">
-        <div class="detail-row"><dt>첫 수업 일자</dt><dd>{{ student.first_lesson_date|date:"Y-m-d"|default:"—" }}</dd></div>
         <div class="detail-row"><dt>시간당 수업료</dt><dd>{{ hourly_rate_display }}원</dd></div>
         <div class="detail-row"><dt>1회 수업(분)</dt><dd>{{ student.lesson_duration_minutes }}분</dd></div>
         <div class="detail-row"><dt>완료 회차</dt><dd>{{ student.lessons_completed }}회</dd></div>

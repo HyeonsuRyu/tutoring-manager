@@ -3,12 +3,11 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import date, datetime, timedelta, timezone as dt_timezone
+from datetime import date, datetime, time, timedelta, timezone as dt_timezone
 from typing import Any
 from zoneinfo import ZoneInfo
 
 from django.db import transaction
-from django.db.models import F, Q
 from django.utils import timezone as django_tz
 
 from calendar_app.models import Lesson, LessonProposalDismissal
@@ -65,18 +64,19 @@ class CalendarEvent:
         }
 
 
-def is_visible_on_calendar(student: Student, on_date: date) -> bool:
-    """False before first_lesson_date when that field is set."""
-    if student.first_lesson_date is None:
-        return True
-    return on_date >= student.first_lesson_date
-
-
 def iter_dates(start: date, end: date):
+    """Yield each day in [start, end). end is exclusive (FullCalendar convention)."""
     current = start
-    while current <= end:
+    while current < end:
         yield current
         current += timedelta(days=1)
+
+
+def _calendar_range_bounds(range_start: date, range_end: date) -> tuple[datetime, datetime]:
+    """UTC bounds for [range_start, range_end) where range_end is exclusive."""
+    start_dt = django_tz.make_aware(datetime.combine(range_start, time.min))
+    end_dt = django_tz.make_aware(datetime.combine(range_end, time.min))
+    return start_dt, end_dt
 
 
 def _localize_slot_start(student: Student, slot: ScheduleSlot, d: date) -> datetime:
@@ -97,15 +97,13 @@ def _display_times(student: Student, start: datetime, end: datetime) -> tuple[st
 
 
 def get_lessons_for_range(owner, range_start: date, range_end: date) -> list[Lesson]:
+    """Lessons overlapping the visible calendar range (range_end exclusive)."""
+    start_dt, end_dt = _calendar_range_bounds(range_start, range_end)
     return list(
         Lesson.objects.filter(
             student__owner=owner,
-            date__gte=range_start,
-            date__lte=range_end,
-        )
-        .filter(
-            Q(student__first_lesson_date__isnull=True)
-            | Q(date__gte=F("student__first_lesson_date"))
+            start_datetime__lt=end_dt,
+            end_datetime__gt=start_dt,
         )
         .select_related("student")
         .order_by("start_datetime")
@@ -116,7 +114,7 @@ def get_proposed_events(owner, range_start: date, range_end: date) -> list[Calen
     slots = ScheduleSlot.objects.filter(student__owner=owner).select_related("student")
     dismissed = {
         (d.schedule_slot_id, d.date)
-        for d in LessonProposalDismissal.objects.filter(owner=owner, date__gte=range_start, date__lte=range_end)
+        for d in LessonProposalDismissal.objects.filter(owner=owner, date__gte=range_start, date__lt=range_end)
     }
     existing = {
         (lesson.schedule_slot_id, lesson.date)
@@ -124,7 +122,7 @@ def get_proposed_events(owner, range_start: date, range_end: date) -> list[Calen
             student__owner=owner,
             schedule_slot__isnull=False,
             date__gte=range_start,
-            date__lte=range_end,
+            date__lt=range_end,
         )
     }
     events: list[CalendarEvent] = []
@@ -132,14 +130,14 @@ def get_proposed_events(owner, range_start: date, range_end: date) -> list[Calen
     for slot in slots:
         student = slot.student
         for d in iter_dates(range_start, range_end):
-            if not is_visible_on_calendar(student, d):
-                continue
             if date_to_slot_day_of_week(d) != slot.day_of_week:
                 continue
             key = (slot.id, d)
             if key in dismissed or key in existing:
                 continue
             start = _localize_slot_start(student, slot, d)
+            if start <= now:
+                continue
             end = _lesson_end(start, student)
             num = student.lessons_completed + 1
             disp_start, disp_end = _display_times(student, start, end)
@@ -255,8 +253,13 @@ def approve_proposal(owner, schedule_slot_id: int, on_date: date) -> Lesson:
         id=schedule_slot_id, student__owner=owner
     )
     student = slot.student
-    if not is_visible_on_calendar(student, on_date):
-        raise ValueError("Cannot approve a lesson before the student's first lesson date.")
+    existing = Lesson.objects.filter(
+        student=student,
+        schedule_slot=slot,
+        date=on_date,
+    ).first()
+    if existing:
+        return existing
     start = _localize_slot_start(student, slot, on_date)
     end = _lesson_end(start, student)
     return Lesson.objects.create(
@@ -362,14 +365,40 @@ def reschedule_lesson(
 
 
 def materialize_due_proposals(owner, now: datetime | None = None) -> list[Lesson]:
-    """Create lessons for proposals whose start time has passed."""
+    """Create lessons for recurring slots whose start time has passed (not shown as proposals)."""
     now = now or django_tz.now()
     today = now.date()
     window_start = today - timedelta(days=7)
-    proposed = get_proposed_events(owner, window_start, today + timedelta(days=14))
+    range_end = today + timedelta(days=1)
+    slots = ScheduleSlot.objects.filter(student__owner=owner).select_related("student")
+    dismissed = {
+        (d.schedule_slot_id, d.date)
+        for d in LessonProposalDismissal.objects.filter(
+            owner=owner, date__gte=window_start, date__lt=range_end
+        )
+    }
+    existing = {
+        (lesson.schedule_slot_id, lesson.date)
+        for lesson in Lesson.objects.filter(
+            student__owner=owner,
+            schedule_slot__isnull=False,
+            date__gte=window_start,
+            date__lt=range_end,
+        )
+    }
     created: list[Lesson] = []
-    for event in proposed:
-        if event.start <= now and event.schedule_slot_id:
-            lesson = approve_proposal(owner, event.schedule_slot_id, event.date)
+    for slot in slots:
+        student = slot.student
+        for d in iter_dates(window_start, range_end):
+            if date_to_slot_day_of_week(d) != slot.day_of_week:
+                continue
+            key = (slot.id, d)
+            if key in dismissed or key in existing:
+                continue
+            start = _localize_slot_start(student, slot, d)
+            if start > now:
+                continue
+            lesson = approve_proposal(owner, slot.id, d)
             created.append(lesson)
+            existing.add(key)
     return created

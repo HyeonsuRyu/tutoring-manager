@@ -96,7 +96,10 @@ class CalendarEventsView(APIView):
             )
         range_start = date.fromisoformat(start_s[:10])
         range_end = date.fromisoformat(end_s[:10])
-        return Response(get_calendar_events(request.user, range_start, range_end))
+        response = Response(get_calendar_events(request.user, range_start, range_end))
+        response["Cache-Control"] = "no-store, no-cache, must-revalidate"
+        response["Pragma"] = "no-cache"
+        return response
 
 
 class LessonViewSet(viewsets.GenericViewSet):
@@ -144,6 +147,7 @@ class LessonViewSet(viewsets.GenericViewSet):
         lesson = self.get_lesson(pk)
         start_raw = request.data.get("start_datetime")
         end_raw = request.data.get("end_datetime")
+        reschedule_handled = False
         if start_raw:
             start = parse_datetime(start_raw)
             end = parse_datetime(end_raw) if end_raw else None
@@ -153,7 +157,15 @@ class LessonViewSet(viewsets.GenericViewSet):
                 except ValueError as exc:
                     return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
                 lesson.refresh_from_db()
-        serializer = LessonSerializer(lesson, data=request.data, partial=True)
+                reschedule_handled = True
+        patch_data = request.data
+        if reschedule_handled:
+            patch_data = {
+                k: v
+                for k, v in request.data.items()
+                if k not in ("start_datetime", "end_datetime")
+            }
+        serializer = LessonSerializer(lesson, data=patch_data, partial=True)
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response(serializer.data)

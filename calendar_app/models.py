@@ -51,6 +51,9 @@ class Lesson(models.Model):
 
     class Meta:
         ordering = ["start_datetime"]
+        indexes = [
+            models.Index(fields=["student", "date"], name="cal_lesson_student_date_idx"),
+        ]
 
     def __str__(self) -> str:
         return f"{self.student.name} #{self.lesson_number} {self.date}"
