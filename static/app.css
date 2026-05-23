@@ -635,7 +635,7 @@ tbody tr:last-child td {
 }
 
 .progress-chart-table col.col-date {
-  width: 6.5rem;
+  width: 8.5rem;
 }
 
 .progress-chart-table col.col-weekday {
@@ -647,11 +647,11 @@ tbody tr:last-child td {
 }
 
 .progress-chart-table col.col-content {
-  width: calc((100% - var(--progress-fixed-cols)) * 0.68);
+  width: calc((100% - var(--progress-fixed-cols)) * 0.7);
 }
 
 .progress-chart-table col.col-notes {
-  width: calc((100% - var(--progress-fixed-cols)) * 0.32);
+  width: calc((100% - var(--progress-fixed-cols)) * 0.3);
 }
 
 .progress-chart-table .cell-compact {
