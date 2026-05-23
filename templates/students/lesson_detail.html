@@ -23,15 +23,16 @@
   {% else %}
   <div class="lesson-mode-toolbar">
     <div class="segmented" role="group" aria-label="수업 작업">
-      <input type="radio" class="segmented-input" name="lesson-mode" id="lesson-mode-lesson" value="lesson" checked>
-      <label class="segmented-btn" for="lesson-mode-lesson">수업</label>
-      <input type="radio" class="segmented-input" name="lesson-mode" id="lesson-mode-cancel" value="cancel">
-      <label class="segmented-btn" for="lesson-mode-cancel">취소</label>
+      <input type="radio" class="segmented-input" name="lesson-action" id="lesson-action-lesson" value="lesson" checked>
+      <label class="segmented-btn" for="lesson-action-lesson">수업</label>
+      <input type="radio" class="segmented-input" name="lesson-action" id="lesson-action-cancel" value="cancel">
+      <label class="segmented-btn" for="lesson-action-cancel">취소</label>
     </div>
   </div>
 
-  <div id="lesson-panel" class="lesson-mode-panel">
-    <form method="post" class="lesson-main-form" id="lesson-main-form">{% csrf_token %}
+  <div id="lesson-work-panel" class="lesson-action-panel">
+    <form method="post" class="lesson-main-form" id="lesson-main-form"
+          data-lesson-start="{{ edit_lesson.start_datetime.isoformat }}">{% csrf_token %}
       <input type="hidden" name="action" value="lesson_update">
       <input type="hidden" name="lesson_id" value="{{ edit_lesson.pk }}">
       <div class="form-field form-field--memo">
@@ -42,19 +43,36 @@
         <label for="lesson-notes">비고</label>
         <textarea id="lesson-notes" name="lesson_notes" rows="3">{{ edit_lesson.lesson_notes }}</textarea>
       </div>
-      <p class="form-submit-row lesson-submit-row">
-        <button type="submit" class="btn btn-secondary">내용·비고 저장</button>
-      </p>
-    </form>
-    <form method="post" action="{% url 'lesson-complete-web' edit_lesson.pk %}" class="lesson-complete-form"
-          onsubmit="return confirm('이 수업을 완료 처리할까요? 저장하지 않은 내용·비고는 반영되지 않을 수 있습니다.')">
-      {% csrf_token %}
-      <p class="text-muted lesson-complete-hint">수업이 끝났다면 완료 처리하세요. 회차가 반영됩니다.</p>
-      <button type="submit" class="btn">수업 완료</button>
+
+      <div class="lesson-phase-toolbar">
+        <div class="segmented segmented--compact" role="group" aria-label="수업 단계">
+          <input type="radio" class="segmented-input" name="lesson-phase" id="lesson-phase-before" value="before"
+                 {% if not lesson_has_started %}checked{% endif %}>
+          <label class="segmented-btn" for="lesson-phase-before">수업 전</label>
+          <input type="radio" class="segmented-input" name="lesson-phase" id="lesson-phase-complete" value="complete"
+                 {% if lesson_has_started %}checked{% endif %}>
+          <label class="segmented-btn" for="lesson-phase-complete">수업 완료</label>
+        </div>
+      </div>
+
+      <div id="phase-before" class="lesson-phase-panel"{% if lesson_has_started %} hidden{% endif %}>
+        <p class="form-submit-row lesson-submit-row">
+          <button type="submit" class="btn btn-secondary">저장</button>
+        </p>
+        <p class="text-muted lesson-mode-hint">수업 전에 메모·준비 내용을 저장할 수 있습니다.</p>
+      </div>
+
+      <div id="phase-complete" class="lesson-phase-panel"{% if not lesson_has_started %} hidden{% endif %}>
+        <p class="form-submit-row lesson-submit-row">
+          <button type="submit" class="btn" id="lesson-complete-btn"
+                  formaction="{% url 'lesson-complete-web' edit_lesson.pk %}">수업 완료</button>
+        </p>
+        <p class="text-muted lesson-mode-hint">완료 시 입력한 내용·비고도 함께 저장됩니다.</p>
+      </div>
     </form>
   </div>
 
-  <div id="cancel-panel" class="lesson-mode-panel" hidden>
+  <div id="cancel-work-panel" class="lesson-action-panel" hidden>
     <form method="post" action="{% url 'lesson-cancel-web' edit_lesson.pk %}" class="lesson-cancel-form" id="lesson-cancel-form">
       {% csrf_token %}
       <div class="form-panel-grid">
@@ -93,9 +111,9 @@
 {% block extra_js %}
 <script>
 (function() {
-  const lessonPanel = document.getElementById('lesson-panel');
-  const cancelPanel = document.getElementById('cancel-panel');
-  if (!lessonPanel || !cancelPanel) return;
+  const lessonWorkPanel = document.getElementById('lesson-work-panel');
+  const cancelWorkPanel = document.getElementById('cancel-work-panel');
+  if (!lessonWorkPanel || !cancelWorkPanel) return;
 
   const lessonContent = document.getElementById('lesson-content');
   const lessonNotes = document.getElementById('lesson-notes');
@@ -103,6 +121,8 @@
   const cancelBy = document.getElementById('cancel-by');
   const cancelMakeup = document.getElementById('cancel-makeup');
   const cancelMakeupDate = document.getElementById('cancel-makeup-date');
+  const phaseBefore = document.getElementById('phase-before');
+  const phaseComplete = document.getElementById('phase-complete');
 
   function clearLessonFields() {
     if (lessonContent) lessonContent.value = '';
@@ -116,13 +136,36 @@
     if (cancelMakeupDate) cancelMakeupDate.value = '';
   }
 
-  function showMode(mode) {
-    const isLesson = mode === 'lesson';
-    lessonPanel.hidden = !isLesson;
-    cancelPanel.hidden = isLesson;
+  function showAction(action) {
+    const isLesson = action === 'lesson';
+    lessonWorkPanel.hidden = !isLesson;
+    cancelWorkPanel.hidden = isLesson;
   }
 
-  document.querySelectorAll('input[name="lesson-mode"]').forEach(function(radio) {
+  function showPhase(phase) {
+    if (!phaseBefore || !phaseComplete) return;
+    phaseBefore.hidden = phase !== 'before';
+    phaseComplete.hidden = phase !== 'complete';
+  }
+
+  const lessonForm = document.getElementById('lesson-main-form');
+  const completeBtn = document.getElementById('lesson-complete-btn');
+  if (lessonForm && completeBtn) {
+    lessonForm.addEventListener('submit', function(ev) {
+      if (ev.submitter !== completeBtn) return;
+      const start = new Date(lessonForm.dataset.lessonStart);
+      if (Date.now() < start.getTime()) {
+        ev.preventDefault();
+        alert('아직 수업 전입니다.');
+        return;
+      }
+      if (!confirm('이 수업을 완료 처리할까요? 입력한 내용·비고도 함께 저장됩니다.')) {
+        ev.preventDefault();
+      }
+    });
+  }
+
+  document.querySelectorAll('input[name="lesson-action"]').forEach(function(radio) {
     radio.addEventListener('change', function() {
       if (!this.checked) return;
       if (this.value === 'lesson') {
@@ -130,7 +173,13 @@
       } else {
         clearLessonFields();
       }
-      showMode(this.value);
+      showAction(this.value);
+    });
+  });
+
+  document.querySelectorAll('input[name="lesson-phase"]').forEach(function(radio) {
+    radio.addEventListener('change', function() {
+      if (this.checked) showPhase(this.value);
     });
   });
 })();

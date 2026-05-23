@@ -1,5 +1,6 @@
 from datetime import date, timedelta
 
+from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect
@@ -8,7 +9,15 @@ from django.views import View
 from django.views.generic import TemplateView
 
 from calendar_app.models import Lesson
-from calendar_app.services import approve_proposal, cancel_lesson, complete_lesson, dismiss_proposal, get_calendar_events
+from calendar_app.services import (
+    LessonNotStartedError,
+    approve_proposal,
+    cancel_lesson,
+    complete_lesson,
+    dismiss_proposal,
+    get_calendar_events,
+    update_lesson_content,
+)
 from students.models import Student
 
 
@@ -35,7 +44,21 @@ class CalendarEventsJsonView(LoginRequiredMixin, View):
 class LessonCompleteView(LoginRequiredMixin, View):
     def post(self, request, pk):
         lesson = get_object_or_404(Lesson, pk=pk, student__owner=request.user)
-        complete_lesson(lesson)
+        update_lesson_content(
+            lesson,
+            lesson_content=request.POST.get("lesson_content", ""),
+            lesson_notes=request.POST.get("lesson_notes", ""),
+        )
+        try:
+            complete_lesson(lesson)
+        except LessonNotStartedError:
+            if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+                return JsonResponse({"ok": False, "message": "아직 수업 전입니다."}, status=400)
+            messages.error(request, "아직 수업 전입니다.")
+            return redirect(
+                reverse("student-detail", kwargs={"pk": lesson.student_id})
+                + f"?lesson={lesson.pk}"
+            )
         if request.headers.get("X-Requested-With") == "XMLHttpRequest":
             return JsonResponse({"ok": True, "lessons_completed": lesson.student.lessons_completed})
         return redirect(

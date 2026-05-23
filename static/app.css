@@ -731,18 +731,25 @@ textarea:focus {
   margin-top: 0.25rem;
 }
 
-.lesson-complete-form {
-  margin-top: 1.25rem;
-  padding-top: 1.25rem;
-  border-top: 1px solid var(--border);
-}
-
-.lesson-complete-hint {
-  margin: 0 0 0.65rem;
+.lesson-mode-hint {
+  margin: 0.65rem 0 0;
   font-size: 0.85rem;
 }
 
+.lesson-phase-toolbar {
+  margin: 1rem 0 0.75rem;
+}
+
+.segmented--compact .segmented-btn {
+  font-size: 0.8125rem;
+  padding: 0.4rem 0.65rem;
+}
+
 .lesson-submit-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
   margin-top: 0.75rem;
 }
 

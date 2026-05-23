@@ -278,8 +278,32 @@ def dismiss_proposal(owner, schedule_slot_id: int, on_date: date) -> LessonPropo
     return dismissal
 
 
+class LessonNotStartedError(ValueError):
+    """Raised when completing a lesson before its scheduled start time."""
+
+
+def update_lesson_content(
+    lesson: Lesson,
+    *,
+    lesson_content: str = "",
+    lesson_notes: str = "",
+) -> Lesson:
+    lesson.lesson_content = lesson_content
+    lesson.lesson_notes = lesson_notes
+    lesson.save(update_fields=["lesson_content", "lesson_notes"])
+    return lesson
+
+
+def lesson_has_started(lesson: Lesson, now: datetime | None = None) -> bool:
+    now = now or django_tz.now()
+    return now >= lesson.start_datetime
+
+
 @transaction.atomic
-def complete_lesson(lesson: Lesson) -> Lesson:
+def complete_lesson(lesson: Lesson, now: datetime | None = None) -> Lesson:
+    now = now or django_tz.now()
+    if not lesson_has_started(lesson, now):
+        raise LessonNotStartedError()
     if lesson.status == Lesson.Status.COMPLETED and lesson.completion_counted:
         return lesson
     lesson.status = Lesson.Status.COMPLETED

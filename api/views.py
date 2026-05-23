@@ -21,7 +21,9 @@ from calendar_app.models import Lesson
 from calendar_app.services import (
     approve_proposal,
     cancel_lesson,
+    LessonNotStartedError,
     complete_lesson,
+    update_lesson_content,
     dismiss_proposal,
     get_calendar_events,
 )
@@ -109,7 +111,15 @@ class LessonViewSet(viewsets.GenericViewSet):
     @action(detail=True, methods=["post"], url_path="complete")
     def complete(self, request, pk=None):
         lesson = self.get_lesson(pk)
-        complete_lesson(lesson)
+        update_lesson_content(
+            lesson,
+            lesson_content=request.data.get("lesson_content", ""),
+            lesson_notes=request.data.get("lesson_notes", ""),
+        )
+        try:
+            complete_lesson(lesson)
+        except LessonNotStartedError:
+            return Response({"detail": "아직 수업 전입니다."}, status=400)
         lesson.refresh_from_db()
         lesson.student.refresh_from_db()
         return Response(

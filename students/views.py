@@ -125,9 +125,11 @@ class StudentDetailView(OwnerQuerysetMixin, DetailView):
         ctx = super().get_context_data(**kwargs)
         lesson_id = self.request.GET.get("lesson")
         if lesson_id:
-            ctx["edit_lesson"] = get_object_or_404(
-                Lesson, pk=lesson_id, student=self.object
-            )
+            from calendar_app.services import lesson_has_started
+
+            edit_lesson = get_object_or_404(Lesson, pk=lesson_id, student=self.object)
+            ctx["edit_lesson"] = edit_lesson
+            ctx["lesson_has_started"] = lesson_has_started(edit_lesson)
             return ctx
 
         ctx["timezone_label"] = timezone_label_ko(self.object.timezone)

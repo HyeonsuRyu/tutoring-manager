@@ -123,9 +123,13 @@ def test_lesson_detail_page(logged_in_client, student):
     res = logged_in_client.get(f"/students/{student.pk}/?lesson={lesson.pk}")
     assert res.status_code == 200
     html = res.content.decode()
-    assert "lesson-mode-lesson" in html
-    assert "내용·비고 저장" in html
+    assert "lesson-action-lesson" in html
+    assert "lesson-action-cancel" in html
+    assert "lesson-phase-before" in html
+    assert "lesson-phase-complete" in html
+    assert 'class="btn btn-secondary">저장</button>' in html
     assert "수업 완료" in html
+    assert "취소 처리" in html
     assert "student-detail-card" not in html
     assert f'href="/students/{student.pk}/"' in html.replace(" ", "")
     assert "기본 정보" not in html
