@@ -1,4 +1,5 @@
-from datetime import date, timedelta
+import json
+from datetime import date, time, timedelta
 
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
@@ -14,8 +15,10 @@ from calendar_app.services import (
     approve_proposal,
     cancel_lesson,
     complete_lesson,
+    create_manual_lesson,
     dismiss_proposal,
     get_calendar_events,
+    resolve_student_for_owner,
     update_lesson_content,
 )
 from students.models import Student
@@ -23,6 +26,15 @@ from students.models import Student
 
 class HomeCalendarView(LoginRequiredMixin, TemplateView):
     template_name = "calendar/home.html"
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        students = Student.objects.filter(owner=self.request.user).order_by("name")
+        ctx["calendar_students_json"] = json.dumps(
+            [{"id": s.id, "name": s.name} for s in students],
+            ensure_ascii=False,
+        )
+        return ctx
 
 
 class CalendarEventsJsonView(LoginRequiredMixin, View):
@@ -76,6 +88,34 @@ class LessonApproveView(LoginRequiredMixin, View):
         on_date = date.fromisoformat(request.POST["date"])
         lesson = approve_proposal(request.user, slot_id, on_date)
         return JsonResponse({"ok": True, "lesson_id": lesson.id})
+
+
+class LessonManualCreateView(LoginRequiredMixin, View):
+    """POST: add a lesson from the calendar + button."""
+
+    def post(self, request):
+        try:
+            on_date = date.fromisoformat(request.POST.get("date", ""))
+            start_time = time.fromisoformat(request.POST.get("start_time", ""))
+            end_time = time.fromisoformat(request.POST.get("end_time", ""))
+            student = resolve_student_for_owner(
+                request.user,
+                student_id=int(request.POST["student_id"])
+                if request.POST.get("student_id")
+                else None,
+                student_name=request.POST.get("student_name", ""),
+            )
+            lesson = create_manual_lesson(
+                request.user,
+                student=student,
+                course_name=request.POST.get("course_name", ""),
+                on_date=on_date,
+                start_time=start_time,
+                end_time=end_time,
+            )
+        except (ValueError, KeyError, Student.DoesNotExist) as exc:
+            return JsonResponse({"ok": False, "message": str(exc)}, status=400)
+        return JsonResponse({"ok": True, "lesson_id": lesson.id, "lesson_number": lesson.lesson_number})
 
 
 class LessonDismissView(LoginRequiredMixin, View):

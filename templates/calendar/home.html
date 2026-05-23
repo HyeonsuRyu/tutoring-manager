@@ -61,6 +61,43 @@
     padding: 1px 5px;
     border-radius: 4px;
   }
+  .fc-daygrid-day-events { position: relative; min-height: 1.25rem; }
+  .cal-add-slot {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 1.1rem;
+    margin: 1px 0;
+    opacity: 0;
+    transition: opacity .15s ease;
+    pointer-events: none;
+  }
+  .fc-daygrid-day:hover .cal-add-slot,
+  .cal-add-slot:hover {
+    opacity: 1;
+    pointer-events: auto;
+  }
+  .cal-add-btn {
+    border: 1px dashed #9ca3af;
+    background: #fff;
+    color: #374151;
+    border-radius: 4px;
+    width: 1.5rem;
+    height: 1.25rem;
+    line-height: 1;
+    font-size: 1rem;
+    font-weight: 700;
+    cursor: pointer;
+    padding: 0;
+  }
+  .cal-add-btn:hover { background: #f3f4f6; border-color: #6b7280; }
+  /* 주간: 시간축에 시각이 있으므로 이벤트 안 시각 숨김 */
+  .fc-timegrid-event .fc-event-time { display: none !important; }
+  #add-lesson-modal { display:none; position:fixed; inset:0; background:rgba(0,0,0,.4); z-index:110; align-items:center; justify-content:center; }
+  #add-lesson-modal.open { display:flex; }
+  #add-lesson-modal .inner { background:#fff; padding:1.25rem; border-radius:8px; max-width:420px; width:90%; }
+  #add-lesson-modal label { display:block; margin-bottom:.75rem; }
+  #add-lesson-modal input { max-width:100%; }
 
 </style>
 {% endblock %}
@@ -81,6 +118,30 @@
 {% block content %}
 <div class="card">
   <div id="calendar"></div>
+</div>
+<div id="add-lesson-modal">
+  <div class="inner">
+    <h3>수업 추가</h3>
+    <p id="add-lesson-date-label" class="text-muted"></p>
+    <label>학생 이름
+      <input type="text" id="add-student-name" list="calendar-student-names" autocomplete="off" required>
+    </label>
+    <datalist id="calendar-student-names"></datalist>
+    <label>과정명
+      <input type="text" id="add-course-name" maxlength="255">
+    </label>
+    <label>시작 시간
+      <input type="time" id="add-start-time" required>
+    </label>
+    <label>종료 시간
+      <input type="time" id="add-end-time" required>
+    </label>
+    <p class="text-muted" id="add-lesson-hint" style="font-size:.85rem;margin-top:0"></p>
+    <p style="margin-top:1rem">
+      <button type="button" class="btn" id="add-lesson-submit">추가</button>
+      <button type="button" class="btn btn-secondary" onclick="closeAddLessonModal()">취소</button>
+    </p>
+  </div>
 </div>
 <div id="event-modal">
   <div class="inner">
@@ -128,8 +189,15 @@ function postForm(url, data) {
     headers: {'X-CSRFToken': getCookie('csrftoken'), 'Content-Type': 'application/x-www-form-urlencoded'},
     credentials: 'same-origin',
     body
-  }).then(r => r.json());
+  }).then(function(r) {
+    return r.json().then(function(body) {
+      if (!r.ok) throw new Error(body.message || '요청에 실패했습니다.');
+      return body;
+    });
+  });
 }
+const CALENDAR_STUDENTS = {{ calendar_students_json|safe }};
+let addLessonContext = { dateStr: '', afterIndex: -1 };
 function patchLesson(id, payload) {
   return fetch('/api/v1/lessons/' + id + '/', {
     method: 'PATCH',
@@ -148,6 +216,83 @@ function patchLesson(id, payload) {
   });
 }
 function closeModal() { document.getElementById('event-modal').classList.remove('open'); }
+function closeAddLessonModal() { document.getElementById('add-lesson-modal').classList.remove('open'); }
+
+function pad2(n) { return String(n).padStart(2, '0'); }
+function formatTimeFromDate(d) {
+  return pad2(d.getHours()) + ':' + pad2(d.getMinutes());
+}
+function getDayLessons(dateStr) {
+  if (!calendar) return [];
+  return calendar.getEvents()
+    .filter(function(ev) {
+      return !ev.extendedProps.proposed && ev.startStr.slice(0, 10) === dateStr;
+    })
+    .sort(function(a, b) { return a.start - b.start; });
+}
+function suggestTimesForSlot(dateStr, afterIndex) {
+  const lessons = getDayLessons(dateStr);
+  if (afterIndex < 0 || lessons.length === 0) {
+    return { start: '09:00', end: '10:00' };
+  }
+  const prev = lessons[afterIndex];
+  const start = prev.end;
+  const end = new Date(start.getTime() + 60 * 60000);
+  return { start: formatTimeFromDate(start), end: formatTimeFromDate(end) };
+}
+function openAddLessonModal(dateStr, afterIndex) {
+  addLessonContext = { dateStr: dateStr, afterIndex: afterIndex };
+  const times = suggestTimesForSlot(dateStr, afterIndex);
+  document.getElementById('add-lesson-date-label').textContent = dateStr;
+  document.getElementById('add-start-time').value = times.start;
+  document.getElementById('add-end-time').value = times.end;
+  document.getElementById('add-student-name').value = '';
+  document.getElementById('add-course-name').value = '';
+  const hint = document.getElementById('add-lesson-hint');
+  hint.textContent = afterIndex < 0
+    ? '이 날짜의 첫 수업 위치입니다.'
+    : '선택한 수업 바로 다음 시간대입니다. 회차는 날짜·시간 순으로 자동 부여됩니다.';
+  document.getElementById('add-lesson-modal').classList.add('open');
+}
+function refreshDayAddButtons() {
+  document.querySelectorAll('.cal-add-slot').forEach(function(el) { el.remove(); });
+  if (!calendar || calendar.view.type !== 'dayGridMonth') return;
+  document.querySelectorAll('.fc-daygrid-day[data-date]').forEach(function(cell) {
+    const dateStr = cell.getAttribute('data-date');
+    const eventsWrap = cell.querySelector('.fc-daygrid-day-events');
+    if (!eventsWrap) return;
+    const lessons = getDayLessons(dateStr);
+    const indices = lessons.length === 0 ? [-1] : lessons.map(function(_, i) { return i; });
+    indices.forEach(function(afterIndex) {
+      const slot = document.createElement('div');
+      slot.className = 'cal-add-slot';
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'cal-add-btn';
+      btn.textContent = '+';
+      btn.title = '수업 추가';
+      btn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        openAddLessonModal(dateStr, afterIndex);
+      });
+      slot.appendChild(btn);
+      if (afterIndex < 0) {
+        eventsWrap.insertBefore(slot, eventsWrap.firstChild);
+      } else {
+        const harnesses = eventsWrap.querySelectorAll('.fc-daygrid-event-harness');
+        if (harnesses[afterIndex]) {
+          harnesses[afterIndex].after(slot);
+        } else {
+          eventsWrap.appendChild(slot);
+        }
+      }
+    });
+  });
+}
+function scheduleRefreshDayAddButtons() {
+  if (window._calAddBtnTimer) clearTimeout(window._calAddBtnTimer);
+  window._calAddBtnTimer = setTimeout(refreshDayAddButtons, 50);
+}
 let currentEvent = null;
 let calendar;
 let hoverBar = null;
@@ -218,6 +363,16 @@ function eventTitle(e) {
   const sub = e.subtitle ? '\n' + e.subtitle : '';
   const bang = e.has_conflict ? ' ‼' : '';
   return base + bang + sub;
+}
+
+function formatEventSubtitle(props, viewType) {
+  const n = props.lesson_number;
+  if (viewType === 'timeGridWeek') {
+    let s = n + '회차';
+    if (props.course_name) s += ' · ' + props.course_name;
+    return s;
+  }
+  return props.subtitle || (n + '회차');
 }
 
 const WEEK_START_KEY = 'calendarWeekStart';
@@ -327,6 +482,31 @@ function openModal(e) {
 }
 
 document.addEventListener('DOMContentLoaded', function() {
+  const studentList = document.getElementById('calendar-student-names');
+  CALENDAR_STUDENTS.forEach(function(s) {
+    const opt = document.createElement('option');
+    opt.value = s.name;
+    studentList.appendChild(opt);
+  });
+  document.getElementById('add-lesson-submit').onclick = function() {
+    const name = document.getElementById('add-student-name').value.trim();
+    const match = CALENDAR_STUDENTS.find(function(s) { return s.name === name; });
+    if (!match) {
+      alert('등록된 학생 이름을 선택하세요.');
+      return;
+    }
+    postForm('{% url "lesson-create-web" %}', {
+      date: addLessonContext.dateStr,
+      student_id: match.id,
+      student_name: name,
+      course_name: document.getElementById('add-course-name').value.trim(),
+      start_time: document.getElementById('add-start-time').value,
+      end_time: document.getElementById('add-end-time').value,
+    }).then(function() {
+      closeAddLessonModal();
+      calendar.refetchEvents();
+    }).catch(function(err) { alert(err.message); });
+  };
   const calEl = document.getElementById('calendar');
   const weekStart = getWeekStartPreference();
   applyWeekStartPreference(weekStart);
@@ -357,12 +537,18 @@ document.addEventListener('DOMContentLoaded', function() {
     headerToolbar: { left: 'prev,next today', center: 'title', right: 'dayGridMonth,timeGridWeek' },
     locale: 'ko',
     firstDay: weekStart,
+    views: {
+      timeGridWeek: {
+        displayEventTime: false,
+      },
+    },
     dayHeaderClassNames: function(arg) { return calendarDayClasses(arg.date); },
     dayCellClassNames: function(arg) { return calendarDayClasses(arg.date); },
     dayCellDidMount: function(arg) {
       const top = arg.el.querySelector('.fc-daygrid-day-top');
       clearMondayWeekNumber(top);
       attachMondayWeekNumber(top, arg.date);
+      scheduleRefreshDayAddButtons();
     },
     dayCellDidUnmount: function(arg) {
       clearMondayWeekNumber(arg.el.querySelector('.fc-daygrid-day-top'));
@@ -388,6 +574,8 @@ document.addEventListener('DOMContentLoaded', function() {
           })));
         }).catch(failure);
     },
+    eventsSet: function() { scheduleRefreshDayAddButtons(); },
+    datesSet: function() { scheduleRefreshDayAddButtons(); },
     eventDidMount: function(arg) {
       if (arg.event.extendedProps.proposed) {
         arg.el.addEventListener('mouseenter', function() {
@@ -398,11 +586,12 @@ document.addEventListener('DOMContentLoaded', function() {
           hideProposalHoverSoon();
         });
       }
-      if (arg.event.extendedProps.subtitle) {
+      const props = arg.event.extendedProps;
+      if (props.lesson_number || props.subtitle) {
         const sub = document.createElement('div');
         sub.className = 'fc-event-sub';
         sub.style.fontSize = '0.75em';
-        sub.textContent = arg.event.extendedProps.subtitle;
+        sub.textContent = formatEventSubtitle(props, arg.view.type);
         const titleEl = arg.el.querySelector('.fc-event-title');
         if (titleEl && !titleEl.querySelector('.fc-event-sub')) titleEl.appendChild(sub);
       }

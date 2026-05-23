@@ -53,6 +53,10 @@ class Lesson(models.Model):
         ordering = ["start_datetime"]
         indexes = [
             models.Index(fields=["student", "date"], name="cal_lesson_student_date_idx"),
+            models.Index(
+                fields=["student", "start_datetime"],
+                name="cal_lesson_student_start_idx",
+            ),
         ]
 
     def __str__(self) -> str:

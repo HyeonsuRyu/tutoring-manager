@@ -15,7 +15,7 @@ def test_proposed_on_matching_weekday(user, student, schedule_slot):
     events = get_proposed_events(user, date(2026, 3, 16), date(2026, 3, 23))
     assert len(events) == 1
     assert events[0].proposed is True
-    assert events[0].lesson_number == student.lessons_completed + 1
+    assert events[0].lesson_number == 1
 
 
 @pytest.mark.integration
@@ -39,7 +39,7 @@ def test_no_proposed_after_dismiss(user, student, schedule_slot):
 def test_approve_creates_lesson(user, student, schedule_slot):
     lesson = approve_proposal(user, schedule_slot.id, date(2026, 3, 16))
     assert Lesson.objects.filter(id=lesson.id).exists()
-    assert lesson.lesson_number == 3
+    assert lesson.lesson_number == 1
 
 
 @pytest.mark.integration
