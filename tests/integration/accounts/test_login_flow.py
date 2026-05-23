@@ -7,8 +7,10 @@ from django.urls import reverse
 @pytest.mark.integration
 def test_login_page_renders(web_client):
     res = web_client.get("/accounts/login/")
+    html = res.content.decode()
     assert res.status_code == 200
-    assert "로그인" in res.content.decode()
+    assert "로그인" in html
+    assert html.count("비밀번호 찾기") == 1
 
 
 @pytest.mark.integration

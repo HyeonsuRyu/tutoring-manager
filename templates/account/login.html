@@ -1,5 +1,4 @@
 {% extends "base.html" %}
-{% load socialaccount %}
 {% block title %}로그인{% endblock %}
 {% block content %}
 <div class="card auth-card">
@@ -9,14 +8,9 @@
     <button type="submit" class="btn">로그인</button>
   </form>
   <p class="text-muted" style="margin-top:1rem">
-    계정이 없으신가요? <a href="{% url 'account_signup' %}"><strong>회원가입</strong></a><br>
-    <a href="{% url 'account_reset_password' %}">비밀번호 찾기</a>
+    계정이 없으신가요? <a href="{% url 'account_signup' %}"><strong>회원가입</strong></a>
   </p>
-  <h3>소셜 로그인</h3>
-  <p>
-    <a class="btn btn-secondary" href="{% provider_login_url 'google' %}">Google</a>
-    <a class="btn btn-secondary" href="{% provider_login_url 'github' %}">GitHub</a>
-    <a class="btn btn-secondary" href="{% provider_login_url 'naver' %}">네이버</a>
-  </p>
+  <h3 class="social-login-heading">소셜 로그인</h3>
+  {% include "account/includes/social_login_buttons.html" %}
 </div>
 {% endblock %}

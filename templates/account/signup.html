@@ -12,5 +12,7 @@
   <p class="text-muted" style="margin-top:1rem">
     이미 계정이 있으신가요? <a href="{% url 'account_login' %}">로그인</a>
   </p>
+  <h3 class="social-login-heading">소셜 로그인</h3>
+  {% include "account/includes/social_login_buttons.html" %}
 </div>
 {% endblock %}

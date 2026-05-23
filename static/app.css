@@ -216,6 +216,63 @@ body.app-guest .guest-main .messages li {
   margin-top: 0;
 }
 
+.social-login-heading {
+  margin: 1.5rem 0 0.75rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-muted, #64748b);
+}
+
+.social-login {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.social-login-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  padding: 0;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: #24292f;
+  text-decoration: none;
+  transition: border-color 0.15s, box-shadow 0.15s, transform 0.1s;
+}
+
+.social-login-btn:hover {
+  border-color: var(--border-strong);
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08);
+  transform: translateY(-1px);
+}
+
+.social-login-btn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.25);
+}
+
+.social-login-btn--google:hover {
+  border-color: #4285f4;
+}
+
+.social-login-btn--github:hover {
+  border-color: #24292f;
+}
+
+.social-login-btn--naver:hover {
+  border-color: #03c75a;
+}
+
+.social-login-icon {
+  display: block;
+  flex-shrink: 0;
+}
+
 .auth-form-card .auth-form {
   display: flex;
   flex-direction: column;
