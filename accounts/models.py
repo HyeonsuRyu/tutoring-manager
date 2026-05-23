@@ -1,3 +1,4 @@
+from django.contrib.auth.hashers import make_password
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
 from django.db import models
 
@@ -36,9 +37,12 @@ class User(AbstractBaseUser, PermissionsMixin):
 
 class BackupCode(models.Model):
     user = models.ForeignKey("accounts.User", on_delete=models.CASCADE, related_name="backup_codes")
-    code = models.CharField(max_length=32)
+    code_hash = models.CharField(max_length=128)
     used = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         indexes = [models.Index(fields=["user", "used"])]
+
+    def set_code(self, plain: str) -> None:
+        self.code_hash = make_password(plain)

@@ -15,4 +15,7 @@ class UserAdmin(BaseUserAdmin):
     add_fieldsets = ((None, {"classes": ("wide",), "fields": ("email", "password1", "password2")}),)
 
 
-admin.site.register(BackupCode)
+@admin.register(BackupCode)
+class BackupCodeAdmin(admin.ModelAdmin):
+    list_display = ("user", "used", "created_at")
+    readonly_fields = ("code_hash", "created_at")

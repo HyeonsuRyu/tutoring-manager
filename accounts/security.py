@@ -22,12 +22,9 @@ class TotpBackend:
         for device in devices_for_user(user):
             if isinstance(device, TOTPDevice) and device.verify_token(token):
                 return True
-        from accounts.models import BackupCode
+        from accounts.backup_codes import verify_backup_code
 
-        backup = BackupCode.objects.filter(user=user, code=token, used=False).first()
-        if backup:
-            backup.used = True
-            backup.save(update_fields=["used"])
+        if verify_backup_code(user, token):
             return True
         return False
 

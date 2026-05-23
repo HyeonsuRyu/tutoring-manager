@@ -1,5 +1,3 @@
-import secrets
-
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib import messages
 from django.shortcuts import redirect, render
@@ -7,21 +5,11 @@ from django.urls import reverse_lazy
 from django.views import View
 from django_otp.plugins.otp_totp.models import TOTPDevice
 
+from accounts.backup_codes import generate_backup_codes
 from accounts.models import BackupCode
 from accounts.security import user_has_totp
 
 BACKUP_CODES_SESSION_KEY = "totp_backup_codes_reveal"
-BACKUP_CODE_COUNT = 8
-
-
-def generate_backup_codes(user) -> list[str]:
-    BackupCode.objects.filter(user=user).delete()
-    codes: list[str] = []
-    for _ in range(BACKUP_CODE_COUNT):
-        code = secrets.token_hex(4)
-        BackupCode.objects.create(user=user, code=code)
-        codes.append(code)
-    return codes
 
 
 class TotpSetupView(LoginRequiredMixin, View):

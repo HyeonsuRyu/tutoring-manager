@@ -17,7 +17,9 @@ def test_totp_setup_page_when_logged_in(logged_in_client):
 @pytest.mark.integration
 def test_backup_codes_hidden_when_2fa_already_active(logged_in_client, user):
     TOTPDevice.objects.create(user=user, name="default", confirmed=True)
-    BackupCode.objects.create(user=user, code="deadbeef", used=False)
+    row = BackupCode(user=user, used=False)
+    row.set_code("deadbeef")
+    row.save()
     res = logged_in_client.get("/accounts/2fa/setup/")
     html = res.content.decode()
     assert "deadbeef" not in html
@@ -35,6 +37,21 @@ def test_backup_codes_shown_once_from_session_flash(logged_in_client):
     assert "이번에만" in html1
     res2 = logged_in_client.get("/accounts/2fa/setup/")
     assert "flashcode01" not in res2.content.decode()
+
+
+@pytest.mark.integration
+def test_backup_codes_stored_hashed_not_plaintext(user):
+    from django.contrib.auth.hashers import identify_hasher
+
+    from accounts.backup_codes import generate_backup_codes, verify_backup_code
+
+    plain_codes = generate_backup_codes(user)
+    plain = plain_codes[0]
+    for row in BackupCode.objects.filter(user=user):
+        assert plain not in row.code_hash
+        identify_hasher(row.code_hash)
+    assert verify_backup_code(user, plain) is True
+    assert verify_backup_code(user, plain) is False
 
 
 @pytest.mark.integration
