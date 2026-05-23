@@ -15,8 +15,11 @@
   </form>
   {% endif %}
   {% if backup_codes %}
-  <h3>백업 코드 (1회용)</h3>
-  <ul>{% for c in backup_codes %}<li><code>{{ c }}</code></li>{% endfor %}</ul>
+  <div class="backup-codes-reveal">
+    <h3>백업 코드 (1회용)</h3>
+    <p class="text-muted">아래 코드는 <strong>이번에만</strong> 표시됩니다. 인증 앱을 쓸 수 없을 때 사용하세요. 안전한 곳에 저장해 두세요.</p>
+    <ul>{% for c in backup_codes %}<li><code>{{ c }}</code></li>{% endfor %}</ul>
+  </div>
   {% endif %}
   <p><a href="{% url 'account_change_password' %}">비밀번호 변경</a></p>
 </div>
