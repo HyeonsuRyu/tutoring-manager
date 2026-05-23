@@ -47,3 +47,4 @@ def test_progress_lists_completed_lesson_columns(logged_in_client, student):
     assert res.status_code == 200
     assert "완료 내용" in body
     assert "요일" in body or "회차" in body
+    assert "progress-chart-table" in body

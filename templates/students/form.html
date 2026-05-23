@@ -297,25 +297,102 @@
     });
   }
 
+  function getLessonDurationMinutes() {
+    const el = document.getElementById('id_lesson_duration_minutes');
+    if (!el) return null;
+    const n = parseInt(el.value, 10);
+    return Number.isFinite(n) && n > 0 ? n : null;
+  }
+
+  function timeToMinutes(value) {
+    if (!value) return null;
+    const parts = value.split(':').map(Number);
+    if (parts.length < 2 || parts.some(n => Number.isNaN(n))) return null;
+    return parts[0] * 60 + parts[1];
+  }
+
+  function minutesToTime(totalMinutes) {
+    const mins = ((totalMinutes % (24 * 60)) + 24 * 60) % (24 * 60);
+    const h = Math.floor(mins / 60);
+    const m = mins % 60;
+    return String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0');
+  }
+
+  function setSlotTimeValue(el, value) {
+    if (!el || el.value === value) return;
+    el.value = value;
+  }
+
+  function syncSlotEndFromStart(row) {
+    const duration = getLessonDurationMinutes();
+    const start = row.querySelector('[name*="start_time"]');
+    const end = row.querySelector('[name*="end_time"]');
+    if (!duration || !start || !end || !start.value) return;
+    const startMins = timeToMinutes(start.value);
+    if (startMins === null) return;
+    setSlotTimeValue(end, minutesToTime(startMins + duration));
+  }
+
+  function syncSlotStartFromEnd(row) {
+    const duration = getLessonDurationMinutes();
+    const start = row.querySelector('[name*="start_time"]');
+    const end = row.querySelector('[name*="end_time"]');
+    if (!duration || !start || !end || !end.value) return;
+    const endMins = timeToMinutes(end.value);
+    if (endMins === null) return;
+    setSlotTimeValue(start, minutesToTime(endMins - duration));
+  }
+
+  function onSlotStartTimeChange(row) {
+    syncSlotEndFromStart(row);
+    updateDuration(row);
+  }
+
+  function onSlotEndTimeChange(row) {
+    syncSlotStartFromEnd(row);
+    updateDuration(row);
+  }
+
+  function syncAllSlotsFromDuration() {
+    document.querySelectorAll('[data-slot-form]').forEach(row => {
+      if (row.dataset.removed || row.style.display === 'none') return;
+      const start = row.querySelector('[name*="start_time"]');
+      if (start && start.value) syncSlotEndFromStart(row);
+      updateDuration(row);
+    });
+  }
+
   function updateDuration(row) {
     const out = row.querySelector('.slot-duration');
     const start = row.querySelector('[name*="start_time"]');
     const end = row.querySelector('[name*="end_time"]');
     if (!out || !start || !end) return;
     if (!start.value || !end.value) { out.textContent = '-'; return; }
-    const [sh, sm] = start.value.split(':').map(Number);
-    const [eh, em] = end.value.split(':').map(Number);
-    if ([sh, sm, eh, em].some(n => Number.isNaN(n))) { out.textContent = '-'; return; }
-    let mins = (eh * 60 + em) - (sh * 60 + sm);
+    const startMins = timeToMinutes(start.value);
+    const endMins = timeToMinutes(end.value);
+    if (startMins === null || endMins === null) { out.textContent = '-'; return; }
+    let mins = endMins - startMins;
     if (mins < 0) mins += 24 * 60;
     out.textContent = String(mins);
   }
 
   function bindRow(row) {
     initTimeRow(row);
-    row.querySelectorAll('[name*="start_time"], [name*="end_time"]').forEach(el => {
-      el.addEventListener('change', () => updateDuration(row));
-      el.addEventListener('input', () => updateDuration(row));
+    row.querySelectorAll('[name*="start_time"]').forEach(el => {
+      const handler = (e) => {
+        if (!e.isTrusted) { updateDuration(row); return; }
+        onSlotStartTimeChange(row);
+      };
+      el.addEventListener('change', handler);
+      el.addEventListener('input', handler);
+    });
+    row.querySelectorAll('[name*="end_time"]').forEach(el => {
+      const handler = (e) => {
+        if (!e.isTrusted) { updateDuration(row); return; }
+        onSlotEndTimeChange(row);
+      };
+      el.addEventListener('change', handler);
+      el.addEventListener('input', handler);
     });
     const rm = row.querySelector('.slot-remove-btn');
     if (rm) rm.addEventListener('click', () => removeSlotRow(row));
@@ -392,6 +469,12 @@
 
   document.querySelectorAll('[data-slot-form]').forEach(bindRow);
   updateRemoveButtons();
+
+  const lessonDurationEl = document.getElementById('id_lesson_duration_minutes');
+  if (lessonDurationEl) {
+    lessonDurationEl.addEventListener('change', syncAllSlotsFromDuration);
+    lessonDurationEl.addEventListener('input', syncAllSlotsFromDuration);
+  }
 
   const addBtn = document.getElementById('slot-add');
   const formsContainer = document.getElementById('slot-forms');

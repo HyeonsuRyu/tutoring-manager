@@ -613,6 +613,79 @@ tbody tr:last-child td {
   border-bottom: none;
 }
 
+/* --- Progress chart table --- */
+.progress-chart-card {
+  padding: 0;
+  overflow: hidden;
+}
+
+.progress-chart-table-wrap {
+  overflow-x: auto;
+}
+
+.progress-chart-table {
+  --progress-fixed-cols: 16.5rem;
+  table-layout: fixed;
+  width: 100%;
+  min-width: 36rem;
+}
+
+.progress-chart-table col.col-lesson-no {
+  width: 2.75rem;
+}
+
+.progress-chart-table col.col-date {
+  width: 6.5rem;
+}
+
+.progress-chart-table col.col-weekday {
+  width: 2.25rem;
+}
+
+.progress-chart-table col.col-time {
+  width: 5rem;
+}
+
+.progress-chart-table col.col-content {
+  width: calc((100% - var(--progress-fixed-cols)) * 0.68);
+}
+
+.progress-chart-table col.col-notes {
+  width: calc((100% - var(--progress-fixed-cols)) * 0.32);
+}
+
+.progress-chart-table .cell-compact {
+  white-space: nowrap;
+  text-align: center;
+  padding-left: 0.45rem;
+  padding-right: 0.45rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.progress-chart-table .cell-date,
+.progress-chart-table .cell-time {
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.progress-chart-table thead .cell-compact,
+.progress-chart-table thead .cell-date,
+.progress-chart-table thead .cell-time {
+  text-align: center;
+}
+
+.progress-chart-table .cell-text {
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  vertical-align: top;
+  line-height: 1.45;
+}
+
+.progress-chart-table .cell-notes {
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+}
+
 .btn {
   display: inline-flex;
   align-items: center;
