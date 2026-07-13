@@ -1,6 +1,0 @@
-# Deprecated for install — use: uv sync --all-groups
-# See pyproject.toml
-Django>=5.0,<6
-djangorestframework>=3.15
-djangorestframework-simplejwt>=5.3
-psycopg[binary]>=3.1

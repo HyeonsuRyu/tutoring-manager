@@ -1,9 +1,0 @@
-{% extends "base.html" %}
-{% block title %}인증 완료{% endblock %}
-{% block content %}
-<div class="card auth-card">
-  <h1>이메일 인증이 완료되었습니다</h1>
-  <p>이제 로그인할 수 있습니다.</p>
-  <p><a href="{% url 'account_login' %}" class="btn">로그인</a></p>
-</div>
-{% endblock %}
