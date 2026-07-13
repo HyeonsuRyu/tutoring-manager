@@ -1,1 +1,35 @@
+# OS / IDE
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
 .cursor/local.mdc
+
+# Env & secrets
+.env
+.env.*
+!.env.example
+backend/.env
+backend/data/
+
+# Python
+backend/.venv/
+backend/**/__pycache__/
+backend/**/*.py[cod]
+backend/.pytest_cache/
+backend/.ruff_cache/
+backend/*.egg-info/
+backend/dist/
+backend/build/
+
+# Node
+frontend/node_modules/
+frontend/dist/
+frontend/playwright-report/
+frontend/test-results/
+frontend/blob-report/
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*

@@ -1,0 +1,43 @@
+---
+description: Frontend, backend, infra, and tooling stack for this repo
+alwaysApply: true
+---
+
+# Tech stack
+
+## Layout
+- Monorepo: `frontend/` (SPA) + `backend/` (API). Do not mix responsibilities across them.
+- Docker Compose services: `app` (FastAPI), `web` (SPA static). **No Postgres in Compose** — DB is an external service.
+- Nginx is **not** shipped as a container; provide config samples only for the host’s existing Nginx.
+- Local email catcher (`mailpit`) belongs in a **dev-only** Compose override/profile, not production Compose.
+
+## Frontend
+- React + Vite, **TypeScript only** (no `.js`/`.jsx` sources).
+- pnpm; Node **24** (LTS).
+- Tailwind CSS + shadcn/ui; path alias `@/` → `src/`.
+- React Router v7 for client routing. FastAPI does not render pages or own UI navigation.
+- TanStack Query for server state; React Hook Form + Zod for forms.
+- Tests: Vitest + Playwright.
+
+### API client
+- Feature modules: `frontend/src/features/<feature>/api/`.
+- Shared HTTP client only: `frontend/src/api/client.ts`.
+- All HTTP goes through this layer (manual types for now). Design so Orval (or similar) can replace/generate feature API modules later without scattering `fetch` in UI.
+
+## Backend
+- FastAPI + **uv**; Python **3.13**.
+- SQLAlchemy **2.x** + Alembic; PostgreSQL.
+- API prefix: `/api/<version>` (e.g. `/api/v1`).
+- Auth: httpOnly cookie + JWT; email/password **and** Google + Naver OAuth.
+- Password hashing: **argon2id**.
+- Email (non-OAuth only): signup verification + password reset. No weekly-report email.
+- Mail: abstract sender interface; **SMTP** implementation first (swap-ready for API providers later). `FROM` via env. **Dev:** Mailpit. **Prod:** real SMTP via env.
+- Files: S3-shaped storage interface; **local filesystem** implementation by default (cost/license); switchable to S3 later.
+- Time: persist **UTC**; default UI zone **Asia/Seoul**; support viewing **multiple time zones** (teacher KR, student abroad).
+- Tests: pytest.
+- Migrations: auto-apply in **development** only; **never** auto-apply in production.
+
+## Do not
+- Add SSR/Next unless explicitly requested (see `web-app.mdc`).
+- Put DB or Nginx as Compose runtime dependencies.
+- Call backend URLs directly from components/hooks outside the API abstraction layer.

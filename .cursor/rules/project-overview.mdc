@@ -1,0 +1,32 @@
+---
+description: Product purpose, users, scope, and language for Tutoring Manager
+alwaysApply: true
+---
+
+# Project overview
+
+## Product
+- **Tutoring Manager** (display name overridable via env): academy tutoring platform focused on **teachers**, also used by **academy admins** and **students/parents**.
+- Single-academy deployment (not multi-academy SaaS). Multiple teachers, students, and parents may register within that academy.
+
+## Users & tenancy
+- Roles: teacher, academy admin, student/parent.
+- Data boundary is the **academy (organization)**; access within it is controlled by **role/permissions** (not “one teacher owns all rows in isolation”).
+
+## In scope (v1)
+- Students CRUD; subjects/curriculum.
+- Lesson calendar; complete / makeup / cancel.
+- Progress, special notes (특이사항), parent comments — **not** a grades-centric model.
+- File/Excel progress import.
+- Weekly report **UI only** (no email — see `tech-stack.mdc`).
+- Hourly pay: **policies change over time**; each lesson uses the policy **in effect at lesson time**.
+- Parent/student portal: view that student’s lesson calendar; view per-lesson parent comments.
+
+## Out of scope (unless explicitly requested)
+- Weekly report email.
+- Multi-academy / white-label SaaS tenancy.
+- Native mobile apps.
+
+## Language
+- Default UI copy: **Korean**, with translation support for overseas students.
+- Source code, identifiers, and commit messages: **English** (sensible defaults; no forced literal translation of every domain term in UI strings stored as data).

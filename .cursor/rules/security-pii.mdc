@@ -1,0 +1,36 @@
+---
+description: Access control, auth session, PII handling, and deletion rules
+alwaysApply: true
+---
+
+# Security & PII
+
+## Authorization
+- Enforce **only on the API** (FastAPI deps/services). Frontend checks are UX only.
+- Teachers: access **assigned** students only. Academy admins: **all** students in the org.
+- Parent/student portal: **own** linked student calendar + **read** parent comments. No other students. No pay rates / progress-admin surfaces unless explicitly added later.
+- Only teachers manage lessons (see `domain-model.mdc`).
+
+## Stored PII (v1)
+- Keep fields lean: phone, name, grade/age (and auth email as required).
+- **Do not mask** in normal UI.
+- **Never** put PII in logs, error payloads, or traces.
+
+## Auth (v1)
+- httpOnly cookie JWT; **SameSite=Lax**.
+- Short-lived access + refresh with **rotation** (e.g. access ~15m, refresh ~14d — tune via env).
+- No concurrent-device cap.
+- Logout: **invalidate that session/refresh** on the server. No “logout all devices” in v1.
+- No 2FA in v1. No step-up re-auth in v1 (password/2FA gates for delete/export — later).
+
+## Files
+- Progress import: parse/extract then **do not retain** the uploaded file. Virus scan = future work (leave a code/TODO comment only).
+- File export = later; do not build export paths in v1.
+
+## Deletion & backups
+- Account/student delete: **hard delete** the account/student row; related **lessons and comments remain** with names/text **unchanged** (orphan display OK).
+- Backup/snapshot PII: **document-only** in v1 (retention/restore may revive deleted rows; no backup-scrub tooling yet).
+
+## Audit
+- Pay-policy edits must stay visible to teacher and admin (`domain-model.mdc`).
+- Broader audit (login failures, bulk export, etc.) — add when those features ship.

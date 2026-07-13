@@ -1,0 +1,45 @@
+---
+description: SPA Architecture
+alwaysApply: true
+---
+
+# Architecture
+
+This project is a client-side SPA.
+
+Do not introduce SSR or server-rendered pages unless explicitly requested.
+
+---
+
+# Navigation
+
+Preserve native browser behavior.
+
+For normal page navigation, use semantic links (`<Link>` or `<a>`).
+
+Do not use imperative navigation (`navigate()`) where a link is appropriate.
+
+Imperative navigation is only acceptable after completing an action such as login, logout, form submission, or deletion.
+
+---
+
+# URL Design
+
+Each page must have its own stable URL.
+
+State that users may want to refresh, bookmark, share, or revisit should be represented in the URL rather than only in client-side state.
+
+---
+
+# Browser Behavior
+
+Do not implement custom behavior that breaks standard browser features such as:
+
+- Back / Forward
+- Refresh
+- Ctrl + Click
+- Middle-click
+- Open in new tab
+- Copy link
+
+When multiple implementations are possible, prefer the one that preserves native browser behavior.

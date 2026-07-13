@@ -1,0 +1,53 @@
+---
+description: Core domain entities, lesson lifecycle, pay policy, and sequencing rules
+alwaysApply: true
+---
+
+# Domain model
+
+## Organization & accounts
+- `Organization` exists; this deployment runs **one** academy.
+- One account → **one** role: teacher | academy_admin | student | parent.
+- `Parent`↔`Student` is **many-to-many**, optional both ways (parent-only or student-only signup allowed; link later).
+- A student may have **multiple teachers** (e.g. by subject).
+
+## Subjects & enrollment
+- Academy-wide subject catalog; teachers may **add** subjects.
+- `Enrollment` required (student–subject, with lifecycle fields as needed).
+- One lesson → **one** subject. v1 curriculum = subject name only (no unit tree).
+
+## Lessons (calendar)
+- No recurrence engine: each lesson is a **single event** (UI may help create the next one).
+- **No proposal entity/status.** Calendar shows only real lessons.
+- Statuses (no transition guards): `scheduled` | `completed` | `cancelled` | `makeup_pending` | `makeup_scheduled`.
+- `scheduled` → `completed` is **never** automatic; teacher must confirm.
+- No separate no-show status; teacher chooses cancel or makeup_pending.
+- Makeup: linked to **original** lesson. Original → `makeup_pending` frees that slot; makeup time may be **unset** until `makeup_scheduled`.
+- Only **teachers** manage lessons (create/move/status). Admins may manage pay policy; not a separate lesson-admin flow unless specified later.
+
+### Quick add (replaces proposals)
+- UI: “빠른 수업 추가” — pick **student + subject**, create lesson as **`scheduled`**.
+- Default start: after the latest of that enrollment’s `scheduled`|`completed`, pick the **next empty slot** for that weekly pattern (supports multiple slots/week).
+- User may drag-and-drop to another time. To mark makeup: create via quick add (or move), then **change attributes** to link as makeup — no separate “보강 전용” feature.
+
+## Sequence (회차)
+- Per **student + subject**; **do not persist** — compute on read (`ROW_NUMBER` by `starts_at`, stable tie-break).
+- Deleting a lesson **renumbers** later ones (gaps close).
+- Makeup shares the **original’s** sequence (count originals only).
+
+## Notes on a lesson
+- Progress + special notes: **teacher only**.
+- Parent comment: **teacher → parent** message; parents **read-only**.
+- All three are **Lesson-scoped**.
+
+## Pay policy
+- Currency model allows multiple codes; **operate in KRW only** for now.
+- Policies live **per teacher**; a lesson may resolve differently.
+- Resolution order: (1) regular vs test → (2) subject → (3) student; rules authored by teacher/admin.
+- Policies change over time → **versioned history**; lesson uses policy **effective at lesson time**.
+- Edits must be **visible to both teacher and admin** (clear audit of who changed what).
+
+## Time & IDs
+- Store instants in **UTC**. `timezone` on **student** and **teacher** for local display / multi-zone views.
+- IDs: **UUID** (prefer time-ordered/v7 when generating).
+- Student/lesson delete: **hard delete**.
